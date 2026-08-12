@@ -74,19 +74,19 @@
             text-align: center;       
         }
         .canvas-header h2 {
-            font-size: 24px;
+            font-size: 32px;
             margin-top: 1.5vw;
             margin-bottom: 1%;
             letter-spacing: 2px;
             font-weight: 600;
         }
         .canvas-header .subtitle {
-            font-size: 16px;
+            font-size: 24px;
             color: #888;
             margin-bottom: 2%;
         }
         .canvas-header .name-line {
-            font-size: 16px;
+            font-size: 20px;
             color: #aaa;
         }
         .canvas-header .name-line input {
@@ -94,7 +94,7 @@
             border: none;
             border-bottom: 1px solid #555;
             color: #fff;
-            font-size: 16px;
+            font-size: 20px;
             width: 45%;
             outline: none;
             padding: 1px 4px;
@@ -559,14 +559,13 @@
 
             /* 移动端：工作区显示在画布下方，但只保留生成区 */
             .workspace { 
-                width: 100%; 
-                max-width: 675px;
-                height: auto; 
-                overflow-y: visible; 
-                padding-right: 0; 
-                gap: 14px;
-                display: flex !important;
-            }
+    display: block !important;      /* 改成 block，彻底避开 flex 收缩问题 */
+    width: 100% !important;
+    max-width: 675px;
+    height: auto !important;
+    overflow: visible !important;
+    padding-right: 0;
+}
 
             /* 隐藏素材选择区 */
             .workspace .tool-section#toolB,
@@ -576,10 +575,12 @@
 
             /* 生成区在移动端自适应 */
             .workspace .tool-section:last-child {
-                height: auto;
-                width: 100%;
-                padding: 14px;
-            }
+    display: flex !important;       /* 强制显示，防止被其他规则覆盖 */
+    height: auto !important;
+    width: 100%;
+    padding: 14px;
+    margin-top: 14px;               /* 替代原来的 gap */
+}
 
             /* 移动端显示热区 */
             .m-tap-a, .m-tap-b {
