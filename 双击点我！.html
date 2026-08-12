@@ -1,0 +1,2877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奇象巡展 × FGO 怪东西问卷</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* ========== 基础重置 ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #ffffff;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px;
+            overflow-x: hidden;       /* 改：只隐藏横向滚动 */
+            overflow-y: auto;         /* 改：允许纵向滚动 */
+        }
+
+        /* ========== 主布局：左画布 + 右工作区 ========== */
+        .main-layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            justify-content: center;
+            width: 100%;
+            max-width: 1200px;
+            /* 总高度 = 视口 - 上下padding */
+            height: calc(100vh - 24px);
+        }
+
+        /* ========== 左侧：画布区 (3:4，高度自适应视口) ========== */
+        .canvas-wrapper {
+            width: 675px;           /* 固定宽度 */
+            height: 900px;          /* 固定高度 */
+            flex-shrink: 0;
+        }
+
+        .canvas-area {
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;    /* 黑底 */
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        /* ----- 顶部标题区 (占画布高度 14%) ----- */
+        .canvas-header {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 14%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;     
+            text-align: center;       
+        }
+        .canvas-header h2 {
+            font-size: 24px;        /* 固定24px */
+            margin-top: 1.5vw;
+            margin-bottom: 1%;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+        .canvas-header .subtitle {
+            font-size: 16px;        /* 固定16px */
+            color: #888;
+            margin-bottom: 2%;
+        }
+        .canvas-header .name-line {
+            font-size: 16px;        /* 固定16px */
+            color: #aaa;
+        }
+        .canvas-header .name-line input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #555;
+            color: #fff;
+            font-size: 16px;        /* 固定16px */
+            width: 45%;
+            outline: none;
+            padding: 1px 4px;
+            font-family: inherit;
+        }
+
+        /* ----- 主体内容区 (占画布高度 86%) ----- */
+        .canvas-body {
+            position: absolute;
+            top: 14%; left: 0;
+            width: 100%;
+            height: 86%;
+            display: flex;
+            padding: 2% 3% 3% 3%;
+            gap: 3%;
+        }
+
+        /* 左右两个半区 */
+        .half-zone {
+            width: 48%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0%;
+        }
+
+        /* 每行：拼图区 + 文字区 */
+        .row {
+            flex: 1;
+            display: flex;
+            gap: 4%;
+            align-items: center;
+        }
+
+        /* 拼图区：方形，用 aspect-ratio 保持 */
+        .puzzle-cell {
+            height: 95%;
+            aspect-ratio: 2 / 3;
+            border-radius: 1%;
+            overflow: hidden;
+            position: relative;
+            background: url("images/background.png") center/cover no-repeat;
+            border: 1.5px dashed #3a3a4a;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .puzzle-cell:hover {
+            border-color: #666;
+        }
+        .puzzle-cell.active {
+            border-color: #e94560;
+            box-shadow: 0 0 0 2px rgba(233,69,96,0.3);
+        }
+        .puzzle-cell .placeholder {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #3a3a4a;
+            font-size: clamp(7px, 1.3vw, 12px);
+            text-align: center;
+            padding: 10%;
+            pointer-events: none;
+            line-height: 1.6;
+        }
+
+        /* 拼图区内部 A区(背景图) */
+        .puzzle-a {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border-radius: 1%;
+            overflow: hidden;
+        }
+        .puzzle-a canvas {
+            width: 48px;
+            height: 48px;
+            position: absolute;
+            left: 50%;
+            top: 31px;
+            transform: translateX(-50%);
+            image-rendering: pixelated;
+        }
+        .puzzle-a img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* 拼图区内部 B区(PNG透明叠加) */
+        .puzzle-b {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .puzzle-b canvas {
+            position: absolute;
+            bottom: 26px;           /* 底边距离拼图底部55px */
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+        }
+        .puzzle-b img {
+            width: 100%; height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* 拼图区内部 C&D 遮罩层 */
+        .puzzle-mask-c, .puzzle-mask-d {
+            position: absolute;
+            z-index: 5;
+            background: #0a0a0a;
+            display: none;
+        }
+
+        /* 文字输入区 */
+        .text-cell {
+            flex: 1;
+            height: 95%;
+            display: flex;
+            align-items: center;
+        }
+        .text-cell textarea {
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #2a2a3a;
+            border-radius: 1px;
+            color: #ffffff;
+            padding: 0 8px;           /* 上下padding清0，左右保留 */
+            font-size: 24px;
+            resize: none;
+            outline: none;
+            line-height: 1.4;
+            font-family: inherit;
+            overflow: hidden;
+            text-align: left;         /* 文字左对齐 */
+            display: flex;
+            align-items: center;      /* placeholder和内容垂直居中 */
+            appearance: none;         /* 清除浏览器默认内边距 */
+        }
+        .text-cell textarea:focus {
+            border-color: #444;
+        }
+        .text-cell textarea::placeholder {
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+
+        /* ========== 右侧：工作区 (高度与画布对齐，内部可滚动) ========== */
+        .workspace {
+            height: 900px;          /* 锁定与画布同高 */
+            flex: 1;
+            max-width: 420px;
+            min-width: 260px;
+            overflow: hidden;
+            padding-right: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;              /* B-A、A-生成区 间距均为45px */
+        }
+
+        .tool-section {
+            background: #151520;
+            border-radius: 12px;
+            padding: 10px 14px;
+            border: 1px solid #2a2a4a;
+            margin-bottom: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;         /* 禁止压缩 */
+        }
+        #toolB { height: 405px; }   /* 900 * 0.45 */
+        #toolA { height: 301px; }   /* 900 * 0.35 */
+        .tool-section:last-child {
+            height: 150px;           /* 生成区固定90px */
+            flex-shrink: 0;
+            justify-content: center;
+        }
+
+        .section-content {
+            flex: 1;
+            min-height: 0;            /* ← 新增：关键修复，允许 flex 子元素压缩，滚动条才能生效 */
+            overflow-y: auto;
+            overflow-x: hidden;
+            margin: 6px 0;
+        }
+        .section-content::-webkit-scrollbar { width: 4px; }
+        .section-content::-webkit-scrollbar-thumb { background: #3a3a5c; border-radius: 2px; }
+
+        .search-box {
+            width: 100%;
+            padding: 6px 10px;
+            background: #0f0f1a;
+            border: 1px solid #2a2a4a;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 12px;
+            outline: none;
+            margin: 1em 0;          /* ← 改：上下各留0.3行间距 */
+        }
+        .search-box:focus { border-color: #e94560; }
+
+        /* B区：高度15vh锁定，比例2:3，一行几张自适应窗口宽度 */
+        #gridB {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, calc(15vh * 2 / 3));
+            gap: 6px;
+            justify-content: center;
+        }
+        #gridB .preset-item {
+            height: 15vh;
+            width: calc(15vh * 2 / 3);
+            aspect-ratio: 2 / 3;
+            border-radius: 4px;
+        }
+
+        /* A区：高度6vh锁定，比例1:1，一行几张自适应窗口宽度 */
+        #gridA {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 6vh);
+            gap: 6px;
+            justify-content: center;
+        }
+        #gridA .preset-item {
+            height: 6vh;
+            width: 6vh;
+            aspect-ratio: 1 / 1;
+            border-radius: 4px;
+        }
+
+        .preset-item {
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            background: #0f0f1a;
+            position: relative;
+        }
+        .preset-item:hover { border-color: #e94560; transform: scale(1.02); }
+        .preset-item.selected { border-color: #e94560; }
+        .preset-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .preset-item::after {
+            content: attr(data-name);
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            font-size: 10px;
+            padding: 3px 4px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+        .preset-item:hover::after { opacity: 1; }
+
+        .upload-btn {
+            display: block; width: 100%;
+            padding: 8px;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+            margin: 0.5em 0;
+        }
+        .upload-btn:hover { background: #c73e54; }
+
+        .hint { font-size: 11px; color: #555; margin-top: 6px; line-height: 1.4; }
+
+        .action-buttons { display: flex; gap: 8px; margin-top: 4px; }
+        .btn { flex: 1; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: opacity 0.2s; margin: 0.5em 0;  }
+        .btn:hover { opacity: 0.9; }
+        .btn-primary { background: #e94560; color: white; }
+        .btn-secondary { background: #1a1a2e; color: #aaa; border: 1px solid #333; }
+
+        input[type="file"] { display: none; }
+
+        /* ========== 快照预览弹窗 ========== */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none; align-items: center; justify-content: center;
+            z-index: 1000; padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: #151520; border-radius: 12px; padding: 16px;
+            max-width: 480px; width: 100%; text-align: center;
+            border: 1px solid #2a2a4a;
+        }
+        .modal-content h3 { margin-bottom: 12px; }
+        .modal-content img { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .modal-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: center; }
+
+        /* ========== 移动端适配 ========== */
+        @media (max-width: 768px) {
+            body { overflow-y: auto; padding: 10px; }
+            .main-layout { flex-direction: column; height: auto; gap: 14px; align-items: center; }
+            .canvas-wrapper { width: 100%; max-width: 400px; height: auto; aspect-ratio: 3/4; }
+            .workspace { width: 100%; max-width: 400px; height: auto; overflow-y: visible; padding-right: 0; }
+            .preset-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="main-layout">
+        <!-- ==================== 画布区 ==================== -->
+        <div class="canvas-wrapper">
+            <div class="canvas-area" id="captureArea">
+                <!-- 顶部标题 -->
+                <div class="canvas-header">
+                    <h2>奇象巡展 × FGO</h2>
+                    <div class="subtitle">怪东西问卷</div>
+                    <div class="name-line">填表人：<input type="text" placeholder=" " id="nameInput"></div>
+                </div>
+
+                <!-- 主体：6个拼图区 + 6个文字区 -->
+                <div class="canvas-body">
+                    <!-- 左半区：拼图1~3 + 文字1~3 -->
+                    <div class="half-zone">
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-1" onclick="selectPuzzle(1)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="puzzle-a"><canvas id="canvasA-1" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-1" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-1"></div>
+                                <div class="puzzle-mask-d" id="maskD-1"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-1"></textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-2" onclick="selectPuzzle(2)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="puzzle-a"><canvas id="canvasA-2" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-2" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-2"></div>
+                                <div class="puzzle-mask-d" id="maskD-2"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-2"></textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-3" onclick="selectPuzzle(3)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="puzzle-a"><canvas id="canvasA-3" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-3" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-3"></div>
+                                <div class="puzzle-mask-d" id="maskD-3"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右半区：拼图4~6 + 文字4~6 -->
+                    <div class="half-zone">
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-4" onclick="selectPuzzle(4)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="puzzle-a"><canvas id="canvasA-4" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-4" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-4"></div>
+                                <div class="puzzle-mask-d" id="maskD-4"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-4"></textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-5" onclick="selectPuzzle(5)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="puzzle-a"><canvas id="canvasA-5" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-5" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-5"></div>
+                                <div class="puzzle-mask-d" id="maskD-5"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-5"></textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-6" onclick="selectPuzzle(6)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="puzzle-a"><canvas id="canvasA-6" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-6" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-6"></div>
+                                <div class="puzzle-mask-d" id="maskD-6"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-6"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 工作区 (可滚动) ==================== -->
+        <div class="workspace">
+        <div class="tool-section" id="toolB">
+            <h3>✨ 明日方舟人物模型选择</h3>
+            <input type="text" class="search-box" placeholder="🔍 搜索文件名..." oninput="filterImages('b', this.value)">
+            <div class="section-content">
+                <div class="preset-grid" id="gridB"></div>
+            </div>
+            <p class="hint">鼠标悬浮缩略图查看角色名。</p>
+        </div>
+
+        <div class="tool-section" id="toolA">
+            <h3>🖼️ 画像选择 / 上传</h3>
+            <input type="text" class="search-box" placeholder="🔍 搜索文件名..." oninput="filterImages('a', this.value)">
+            <div class="section-content">
+                <div class="preset-grid" id="gridA"></div>
+            </div>
+            <button class="upload-btn" onclick="document.getElementById('uploadA').click()">📁 上传本地图片</button>
+            <input type="file" id="uploadA" accept="image/*" onchange="handleUpload(event, 'a')">
+            <p class="hint">鼠标悬浮缩略图可查看技能件名，或另行上传其他图片。</p>
+        </div>
+
+            <div class="tool-section">
+                <h3>📸 生成图片</h3>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="capture()">图片导出</button>
+                    <button class="btn btn-secondary" onclick="resetAll()">重置全部</button>
+                </div>
+                <p class="hint">如生成失败，请检查浏览器是否允许弹窗。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 预览弹窗 ==================== -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <h3>📷 图片预览</h3>
+            <img id="previewImg" alt="快照预览">
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="downloadImage()">💾 保存到本地</button>
+                <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================
+        // 配置区：填入 images/A/ 和 images/B/ 下的图片
+        // =====================================================
+        let presetImages = { a: [], b: [] };
+        let currentPuzzleId = null;
+        const puzzleData = {
+            1: { a: null, b: null },
+            2: { a: null, b: null },
+            3: { a: null, b: null },
+            4: { a: null, b: null },
+            5: { a: null, b: null },
+            6: { a: null, b: null },
+        };
+
+
+        function loadImages() {
+            // ===== 把 images.json 的内容粘贴到下面这行 =====
+            presetImages = {
+  "a": [
+    {
+      "file": "images/A/NP获得量提升.png",
+      "name": "NP获得量提升"
+    },
+    {
+      "file": "images/A/七顶兽冠.png",
+      "name": "七顶兽冠"
+    },
+    {
+      "file": "images/A/三色魔放.png",
+      "name": "三色魔放"
+    },
+    {
+      "file": "images/A/下毒.png",
+      "name": "下毒"
+    },
+    {
+      "file": "images/A/与睿智的接触.png",
+      "name": "与睿智的接触"
+    },
+    {
+      "file": "images/A/人鱼肉.png",
+      "name": "人鱼肉"
+    },
+    {
+      "file": "images/A/伤害下降.png",
+      "name": "伤害下降"
+    },
+    {
+      "file": "images/A/充能.png",
+      "name": "充能"
+    },
+    {
+      "file": "images/A/充能阶段上升.png",
+      "name": "充能阶段上升"
+    },
+    {
+      "file": "images/A/光之地平线.png",
+      "name": "光之地平线"
+    },
+    {
+      "file": "images/A/冥界守护.png",
+      "name": "冥界守护"
+    },
+    {
+      "file": "images/A/减冷却.png",
+      "name": "减冷却"
+    },
+    {
+      "file": "images/A/出星.png",
+      "name": "出星"
+    },
+    {
+      "file": "images/A/加攻.png",
+      "name": "加攻"
+    },
+    {
+      "file": "images/A/加攻加防.png",
+      "name": "加攻加防"
+    },
+    {
+      "file": "images/A/加防.png",
+      "name": "加防"
+    },
+    {
+      "file": "images/A/即死成功率下降.png",
+      "name": "即死成功率下降"
+    },
+    {
+      "file": "images/A/即死成功率提升.png",
+      "name": "即死成功率提升"
+    },
+    {
+      "file": "images/A/即死无效.png",
+      "name": "即死无效"
+    },
+    {
+      "file": "images/A/即死耐性下降.png",
+      "name": "即死耐性下降"
+    },
+    {
+      "file": "images/A/即死耐性提升.png",
+      "name": "即死耐性提升"
+    },
+    {
+      "file": "images/A/反集星.png",
+      "name": "反集星"
+    },
+    {
+      "file": "images/A/受击NP获得量下降.png",
+      "name": "受击NP获得量下降"
+    },
+    {
+      "file": "images/A/受击NP获得量提升.png",
+      "name": "受击NP获得量提升"
+    },
+    {
+      "file": "images/A/噬樱者.png",
+      "name": "噬樱者"
+    },
+    {
+      "file": "images/A/回合充能.png",
+      "name": "回合充能"
+    },
+    {
+      "file": "images/A/回合出星.png",
+      "name": "回合出星"
+    },
+    {
+      "file": "images/A/回复量下降.png",
+      "name": "回复量下降"
+    },
+    {
+      "file": "images/A/回复量提升.png",
+      "name": "回复量提升"
+    },
+    {
+      "file": "images/A/回血.png",
+      "name": "回血"
+    },
+    {
+      "file": "images/A/回避.png",
+      "name": "回避"
+    },
+    {
+      "file": "images/A/妖星火轮.png",
+      "name": "妖星火轮"
+    },
+    {
+      "file": "images/A/完全流体.png",
+      "name": "完全流体"
+    },
+    {
+      "file": "images/A/宝具威力下降.png",
+      "name": "宝具威力下降"
+    },
+    {
+      "file": "images/A/宝具威力提升.png",
+      "name": "宝具威力提升"
+    },
+    {
+      "file": "images/A/封印.png",
+      "name": "封印"
+    },
+    {
+      "file": "images/A/弱化成功率下降.png",
+      "name": "弱化成功率下降"
+    },
+    {
+      "file": "images/A/弱化成功率提升.png",
+      "name": "弱化成功率提升"
+    },
+    {
+      "file": "images/A/弱化无效.png",
+      "name": "弱化无效"
+    },
+    {
+      "file": "images/A/弱化耐性下降.png",
+      "name": "弱化耐性下降"
+    },
+    {
+      "file": "images/A/弱化耐性提升.png",
+      "name": "弱化耐性提升"
+    },
+    {
+      "file": "images/A/弱化解除.png",
+      "name": "弱化解除"
+    },
+    {
+      "file": "images/A/强化无效.png",
+      "name": "强化无效"
+    },
+    {
+      "file": "images/A/强化解除耐性下降.png",
+      "name": "强化解除耐性下降"
+    },
+    {
+      "file": "images/A/强化解除耐性提升.png",
+      "name": "强化解除耐性提升"
+    },
+    {
+      "file": "images/A/必中.png",
+      "name": "必中"
+    },
+    {
+      "file": "images/A/掉星率增加.png",
+      "name": "掉星率增加"
+    },
+    {
+      "file": "images/A/攻击附加弱化.png",
+      "name": "攻击附加弱化"
+    },
+    {
+      "file": "images/A/攻击附加强化.png",
+      "name": "攻击附加强化"
+    },
+    {
+      "file": "images/A/无敌.png",
+      "name": "无敌"
+    },
+    {
+      "file": "images/A/无敌贯通.png",
+      "name": "无敌贯通"
+    },
+    {
+      "file": "images/A/无视弱化耐性.png",
+      "name": "无视弱化耐性"
+    },
+    {
+      "file": "images/A/无貌之月.png",
+      "name": "无貌之月"
+    },
+    {
+      "file": "images/A/星之笼(大).png",
+      "name": "星之笼(大)"
+    },
+    {
+      "file": "images/A/星之笼(小).png",
+      "name": "星之笼(小)"
+    },
+    {
+      "file": "images/A/暴击发生率下降.png",
+      "name": "暴击发生率下降"
+    },
+    {
+      "file": "images/A/暴击威力下降.png",
+      "name": "暴击威力下降"
+    },
+    {
+      "file": "images/A/暴击威力提升.png",
+      "name": "暴击威力提升"
+    },
+    {
+      "file": "images/A/毅力.png",
+      "name": "毅力"
+    },
+    {
+      "file": "images/A/每回合回复.png",
+      "name": "每回合回复"
+    },
+    {
+      "file": "images/A/毒.png",
+      "name": "毒"
+    },
+    {
+      "file": "images/A/洗牌.png",
+      "name": "洗牌"
+    },
+    {
+      "file": "images/A/灭气.png",
+      "name": "灭气"
+    },
+    {
+      "file": "images/A/灼伤.png",
+      "name": "灼伤"
+    },
+    {
+      "file": "images/A/特攻.png",
+      "name": "特攻"
+    },
+    {
+      "file": "images/A/特殊耐性下降.png",
+      "name": "特殊耐性下降"
+    },
+    {
+      "file": "images/A/特殊耐性提升.png",
+      "name": "特殊耐性提升"
+    },
+    {
+      "file": "images/A/目标集中.png",
+      "name": "目标集中"
+    },
+    {
+      "file": "images/A/直死之魔眼.png",
+      "name": "直死之魔眼"
+    },
+    {
+      "file": "images/A/眩晕.png",
+      "name": "眩晕"
+    },
+    {
+      "file": "images/A/睡眠.png",
+      "name": "睡眠"
+    },
+    {
+      "file": "images/A/秀丽风情.png",
+      "name": "秀丽风情"
+    },
+    {
+      "file": "images/A/秒表buff.png",
+      "name": "秒表buff"
+    },
+    {
+      "file": "images/A/秒表亡语.png",
+      "name": "秒表亡语"
+    },
+    {
+      "file": "images/A/秒表毅力.png",
+      "name": "秒表毅力"
+    },
+    {
+      "file": "images/A/第五势.png",
+      "name": "第五势"
+    },
+    {
+      "file": "images/A/第五盛.png",
+      "name": "第五盛"
+    },
+    {
+      "file": "images/A/红卡集星.png",
+      "name": "红卡集星"
+    },
+    {
+      "file": "images/A/红放.png",
+      "name": "红放"
+    },
+    {
+      "file": "images/A/红绿放.png",
+      "name": "红绿放"
+    },
+    {
+      "file": "images/A/红蓝放.png",
+      "name": "红蓝放"
+    },
+    {
+      "file": "images/A/绿卡集星.png",
+      "name": "绿卡集星"
+    },
+    {
+      "file": "images/A/绿放.png",
+      "name": "绿放"
+    },
+    {
+      "file": "images/A/罗宾鸟.png",
+      "name": "罗宾鸟"
+    },
+    {
+      "file": "images/A/蓝卡集星.png",
+      "name": "蓝卡集星"
+    },
+    {
+      "file": "images/A/蓝放.png",
+      "name": "蓝放"
+    },
+    {
+      "file": "images/A/蓝绿放.png",
+      "name": "蓝绿放"
+    },
+    {
+      "file": "images/A/血量上升.png",
+      "name": "血量上升"
+    },
+    {
+      "file": "images/A/被暴击发生耐性提升.png",
+      "name": "被暴击发生耐性提升"
+    },
+    {
+      "file": "images/A/诅咒.png",
+      "name": "诅咒"
+    },
+    {
+      "file": "images/A/赤之星瞳.png",
+      "name": "赤之星瞳"
+    },
+    {
+      "file": "images/A/阴阳鱼.png",
+      "name": "阴阳鱼"
+    },
+    {
+      "file": "images/A/降攻.png",
+      "name": "降攻"
+    },
+    {
+      "file": "images/A/降防.png",
+      "name": "降防"
+    },
+    {
+      "file": "images/A/雅号·异星蛸.png",
+      "name": "雅号·异星蛸"
+    },
+    {
+      "file": "images/A/集星.png",
+      "name": "集星"
+    },
+    {
+      "file": "images/A/青之星瞳.png",
+      "name": "青之星瞳"
+    },
+    {
+      "file": "images/A/魅惑.png",
+      "name": "魅惑"
+    },
+    {
+      "file": "images/A/魔弹.png",
+      "name": "魔弹"
+    }
+  ],
+  "b": [
+    {
+      "file": "images/B/12F.png",
+      "name": "12F"
+    },
+    {
+      "file": "images/B/Castle-3.png",
+      "name": "Castle-3"
+    },
+    {
+      "file": "images/B/CONFESS-47.png",
+      "name": "CONFESS-47"
+    },
+    {
+      "file": "images/B/Friston-3.png",
+      "name": "Friston-3"
+    },
+    {
+      "file": "images/B/GALLUS².png",
+      "name": "GALLUS²"
+    },
+    {
+      "file": "images/B/Lancet-2.png",
+      "name": "Lancet-2"
+    },
+    {
+      "file": "images/B/Miss.Christine.png",
+      "name": "Miss.Christine"
+    },
+    {
+      "file": "images/B/Mon3tr.png",
+      "name": "Mon3tr"
+    },
+    {
+      "file": "images/B/PhonoR-0.png",
+      "name": "PhonoR-0"
+    },
+    {
+      "file": "images/B/THRM-EX.png",
+      "name": "THRM-EX"
+    },
+    {
+      "file": "images/B/U-Official.png",
+      "name": "U-Official"
+    },
+    {
+      "file": "images/B/W.png",
+      "name": "W"
+    },
+    {
+      "file": "images/B/万顷.png",
+      "name": "万顷"
+    },
+    {
+      "file": "images/B/三角初华.png",
+      "name": "三角初华"
+    },
+    {
+      "file": "images/B/丰川祥子.png",
+      "name": "丰川祥子"
+    },
+    {
+      "file": "images/B/临光.png",
+      "name": "临光"
+    },
+    {
+      "file": "images/B/乌啾.png",
+      "name": "乌啾"
+    },
+    {
+      "file": "images/B/乌尔比安.png",
+      "name": "乌尔比安"
+    },
+    {
+      "file": "images/B/乌有.png",
+      "name": "乌有"
+    },
+    {
+      "file": "images/B/九色鹿.png",
+      "name": "九色鹿"
+    },
+    {
+      "file": "images/B/予愿安洁莉娜.png",
+      "name": "予愿安洁莉娜"
+    },
+    {
+      "file": "images/B/云迹.png",
+      "name": "云迹"
+    },
+    {
+      "file": "images/B/亚叶.png",
+      "name": "亚叶"
+    },
+    {
+      "file": "images/B/仇白.png",
+      "name": "仇白"
+    },
+    {
+      "file": "images/B/令.png",
+      "name": "令"
+    },
+    {
+      "file": "images/B/伊内丝.png",
+      "name": "伊内丝"
+    },
+    {
+      "file": "images/B/伊桑.png",
+      "name": "伊桑"
+    },
+    {
+      "file": "images/B/伊芙利特.png",
+      "name": "伊芙利特"
+    },
+    {
+      "file": "images/B/休谟斯.png",
+      "name": "休谟斯"
+    },
+    {
+      "file": "images/B/伯塔尼.png",
+      "name": "伯塔尼"
+    },
+    {
+      "file": "images/B/伺夜.png",
+      "name": "伺夜"
+    },
+    {
+      "file": "images/B/但书.png",
+      "name": "但书"
+    },
+    {
+      "file": "images/B/余.png",
+      "name": "余"
+    },
+    {
+      "file": "images/B/佩佩.png",
+      "name": "佩佩"
+    },
+    {
+      "file": "images/B/佩德洛.png",
+      "name": "佩德洛"
+    },
+    {
+      "file": "images/B/信仰搅拌机.png",
+      "name": "信仰搅拌机"
+    },
+    {
+      "file": "images/B/假日威龙陈.png",
+      "name": "假日威龙陈"
+    },
+    {
+      "file": "images/B/傀影.png",
+      "name": "傀影"
+    },
+    {
+      "file": "images/B/克洛丝.png",
+      "name": "克洛丝"
+    },
+    {
+      "file": "images/B/八幡海铃.png",
+      "name": "八幡海铃"
+    },
+    {
+      "file": "images/B/冬时.png",
+      "name": "冬时"
+    },
+    {
+      "file": "images/B/冰酿.png",
+      "name": "冰酿"
+    },
+    {
+      "file": "images/B/凛冬.png",
+      "name": "凛冬"
+    },
+    {
+      "file": "images/B/凛御银灰.png",
+      "name": "凛御银灰"
+    },
+    {
+      "file": "images/B/凛视.png",
+      "name": "凛视"
+    },
+    {
+      "file": "images/B/凯尔希.png",
+      "name": "凯尔希"
+    },
+    {
+      "file": "images/B/凯尔希·思衡托.png",
+      "name": "凯尔希·思衡托"
+    },
+    {
+      "file": "images/B/凯瑟琳.png",
+      "name": "凯瑟琳"
+    },
+    {
+      "file": "images/B/初雪.png",
+      "name": "初雪"
+    },
+    {
+      "file": "images/B/刺玫.png",
+      "name": "刺玫"
+    },
+    {
+      "file": "images/B/刻俄柏.png",
+      "name": "刻俄柏"
+    },
+    {
+      "file": "images/B/刻刀.png",
+      "name": "刻刀"
+    },
+    {
+      "file": "images/B/医生.png",
+      "name": "医生"
+    },
+    {
+      "file": "images/B/华法琳.png",
+      "name": "华法琳"
+    },
+    {
+      "file": "images/B/协律.png",
+      "name": "协律"
+    },
+    {
+      "file": "images/B/卡夫卡.png",
+      "name": "卡夫卡"
+    },
+    {
+      "file": "images/B/卡涅利安.png",
+      "name": "卡涅利安"
+    },
+    {
+      "file": "images/B/卡缇.png",
+      "name": "卡缇"
+    },
+    {
+      "file": "images/B/卡达.png",
+      "name": "卡达"
+    },
+    {
+      "file": "images/B/历阵锐枪芬.png",
+      "name": "历阵锐枪芬"
+    },
+    {
+      "file": "images/B/双月.png",
+      "name": "双月"
+    },
+    {
+      "file": "images/B/古米.png",
+      "name": "古米"
+    },
+    {
+      "file": "images/B/可露希尔.png",
+      "name": "可露希尔"
+    },
+    {
+      "file": "images/B/可颂.png",
+      "name": "可颂"
+    },
+    {
+      "file": "images/B/史尔特尔.png",
+      "name": "史尔特尔"
+    },
+    {
+      "file": "images/B/史都华德.png",
+      "name": "史都华德"
+    },
+    {
+      "file": "images/B/号角.png",
+      "name": "号角"
+    },
+    {
+      "file": "images/B/司霆惊蛰.png",
+      "name": "司霆惊蛰"
+    },
+    {
+      "file": "images/B/吉星.png",
+      "name": "吉星"
+    },
+    {
+      "file": "images/B/吽.png",
+      "name": "吽"
+    },
+    {
+      "file": "images/B/和弦.png",
+      "name": "和弦"
+    },
+    {
+      "file": "images/B/哈洛德.png",
+      "name": "哈洛德"
+    },
+    {
+      "file": "images/B/哈蒂娅.png",
+      "name": "哈蒂娅"
+    },
+    {
+      "file": "images/B/响石.png",
+      "name": "响石"
+    },
+    {
+      "file": "images/B/嘉维尔.png",
+      "name": "嘉维尔"
+    },
+    {
+      "file": "images/B/嘉辛塔.png",
+      "name": "嘉辛塔"
+    },
+    {
+      "file": "images/B/四月.png",
+      "name": "四月"
+    },
+    {
+      "file": "images/B/因陀罗.png",
+      "name": "因陀罗"
+    },
+    {
+      "file": "images/B/图耶.png",
+      "name": "图耶"
+    },
+    {
+      "file": "images/B/圣约送葬人.png",
+      "name": "圣约送葬人"
+    },
+    {
+      "file": "images/B/圣聆初雪.png",
+      "name": "圣聆初雪"
+    },
+    {
+      "file": "images/B/地灵.png",
+      "name": "地灵"
+    },
+    {
+      "file": "images/B/坚雷.png",
+      "name": "坚雷"
+    },
+    {
+      "file": "images/B/埃拉托.png",
+      "name": "埃拉托"
+    },
+    {
+      "file": "images/B/塑心.png",
+      "name": "塑心"
+    },
+    {
+      "file": "images/B/塞雷娅.png",
+      "name": "塞雷娅"
+    },
+    {
+      "file": "images/B/复奏.png",
+      "name": "复奏"
+    },
+    {
+      "file": "images/B/夏栎.png",
+      "name": "夏栎"
+    },
+    {
+      "file": "images/B/夕.png",
+      "name": "夕"
+    },
+    {
+      "file": "images/B/多萝西.png",
+      "name": "多萝西"
+    },
+    {
+      "file": "images/B/夜刀.png",
+      "name": "夜刀"
+    },
+    {
+      "file": "images/B/夜半.png",
+      "name": "夜半"
+    },
+    {
+      "file": "images/B/夜烟.png",
+      "name": "夜烟"
+    },
+    {
+      "file": "images/B/夜莺.png",
+      "name": "夜莺"
+    },
+    {
+      "file": "images/B/夜魔.png",
+      "name": "夜魔"
+    },
+    {
+      "file": "images/B/天火.png",
+      "name": "天火"
+    },
+    {
+      "file": "images/B/天空盒.png",
+      "name": "天空盒"
+    },
+    {
+      "file": "images/B/奥斯塔.png",
+      "name": "奥斯塔"
+    },
+    {
+      "file": "images/B/奥达.png",
+      "name": "奥达"
+    },
+    {
+      "file": "images/B/妮芙.png",
+      "name": "妮芙"
+    },
+    {
+      "file": "images/B/娜仁图亚.png",
+      "name": "娜仁图亚"
+    },
+    {
+      "file": "images/B/娜斯提.png",
+      "name": "娜斯提"
+    },
+    {
+      "file": "images/B/子月.png",
+      "name": "子月"
+    },
+    {
+      "file": "images/B/孑.png",
+      "name": "孑"
+    },
+    {
+      "file": "images/B/守林人.png",
+      "name": "守林人"
+    },
+    {
+      "file": "images/B/安哲拉.png",
+      "name": "安哲拉"
+    },
+    {
+      "file": "images/B/安德切尔.png",
+      "name": "安德切尔"
+    },
+    {
+      "file": "images/B/安比尔.png",
+      "name": "安比尔"
+    },
+    {
+      "file": "images/B/安洁莉娜.png",
+      "name": "安洁莉娜"
+    },
+    {
+      "file": "images/B/安赛尔.png",
+      "name": "安赛尔"
+    },
+    {
+      "file": "images/B/宴.png",
+      "name": "宴"
+    },
+    {
+      "file": "images/B/寒檀.png",
+      "name": "寒檀"
+    },
+    {
+      "file": "images/B/寒芒克洛丝.png",
+      "name": "寒芒克洛丝"
+    },
+    {
+      "file": "images/B/寻澜.png",
+      "name": "寻澜"
+    },
+    {
+      "file": "images/B/导火索.png",
+      "name": "导火索"
+    },
+    {
+      "file": "images/B/小满.png",
+      "name": "小满"
+    },
+    {
+      "file": "images/B/山.png",
+      "name": "山"
+    },
+    {
+      "file": "images/B/崖心.png",
+      "name": "崖心"
+    },
+    {
+      "file": "images/B/嵯峨.png",
+      "name": "嵯峨"
+    },
+    {
+      "file": "images/B/巡林者.png",
+      "name": "巡林者"
+    },
+    {
+      "file": "images/B/左乐.png",
+      "name": "左乐"
+    },
+    {
+      "file": "images/B/巫恋.png",
+      "name": "巫恋"
+    },
+    {
+      "file": "images/B/布丁.png",
+      "name": "布丁"
+    },
+    {
+      "file": "images/B/布洛卡.png",
+      "name": "布洛卡"
+    },
+    {
+      "file": "images/B/帕拉斯.png",
+      "name": "帕拉斯"
+    },
+    {
+      "file": "images/B/年.png",
+      "name": "年"
+    },
+    {
+      "file": "images/B/幽灵鲨.png",
+      "name": "幽灵鲨"
+    },
+    {
+      "file": "images/B/异客.png",
+      "name": "异客"
+    },
+    {
+      "file": "images/B/弑君者.png",
+      "name": "弑君者"
+    },
+    {
+      "file": "images/B/引星棘刺.png",
+      "name": "引星棘刺"
+    },
+    {
+      "file": "images/B/归溟幽灵鲨.png",
+      "name": "归溟幽灵鲨"
+    },
+    {
+      "file": "images/B/录武官.png",
+      "name": "录武官"
+    },
+    {
+      "file": "images/B/微风.png",
+      "name": "微风"
+    },
+    {
+      "file": "images/B/德克萨斯.png",
+      "name": "德克萨斯"
+    },
+    {
+      "file": "images/B/忍冬.png",
+      "name": "忍冬"
+    },
+    {
+      "file": "images/B/怒潮凛冬.png",
+      "name": "怒潮凛冬"
+    },
+    {
+      "file": "images/B/惊蛰.png",
+      "name": "惊蛰"
+    },
+    {
+      "file": "images/B/慑砂.png",
+      "name": "慑砂"
+    },
+    {
+      "file": "images/B/慕斯.png",
+      "name": "慕斯"
+    },
+    {
+      "file": "images/B/战车.png",
+      "name": "战车"
+    },
+    {
+      "file": "images/B/截云.png",
+      "name": "截云"
+    },
+    {
+      "file": "images/B/戴菲恩.png",
+      "name": "戴菲恩"
+    },
+    {
+      "file": "images/B/承曦格雷伊.png",
+      "name": "承曦格雷伊"
+    },
+    {
+      "file": "images/B/折光.png",
+      "name": "折光"
+    },
+    {
+      "file": "images/B/折桠.png",
+      "name": "折桠"
+    },
+    {
+      "file": "images/B/拉普兰德.png",
+      "name": "拉普兰德"
+    },
+    {
+      "file": "images/B/拜松.png",
+      "name": "拜松"
+    },
+    {
+      "file": "images/B/掠风.png",
+      "name": "掠风"
+    },
+    {
+      "file": "images/B/推进之王.png",
+      "name": "推进之王"
+    },
+    {
+      "file": "images/B/提丰.png",
+      "name": "提丰"
+    },
+    {
+      "file": "images/B/摆渡人.png",
+      "name": "摆渡人"
+    },
+    {
+      "file": "images/B/摩根.png",
+      "name": "摩根"
+    },
+    {
+      "file": "images/B/撷英调香师.png",
+      "name": "撷英调香师"
+    },
+    {
+      "file": "images/B/斑点.png",
+      "name": "斑点"
+    },
+    {
+      "file": "images/B/斥罪.png",
+      "name": "斥罪"
+    },
+    {
+      "file": "images/B/斩业星熊.png",
+      "name": "斩业星熊"
+    },
+    {
+      "file": "images/B/断崖.png",
+      "name": "断崖"
+    },
+    {
+      "file": "images/B/断罪者.png",
+      "name": "断罪者"
+    },
+    {
+      "file": "images/B/斯卡蒂.png",
+      "name": "斯卡蒂"
+    },
+    {
+      "file": "images/B/新约能天使.png",
+      "name": "新约能天使"
+    },
+    {
+      "file": "images/B/早露.png",
+      "name": "早露"
+    },
+    {
+      "file": "images/B/时隙.png",
+      "name": "时隙"
+    },
+    {
+      "file": "images/B/明椒.png",
+      "name": "明椒"
+    },
+    {
+      "file": "images/B/星极.png",
+      "name": "星极"
+    },
+    {
+      "file": "images/B/星源.png",
+      "name": "星源"
+    },
+    {
+      "file": "images/B/星熊.png",
+      "name": "星熊"
+    },
+    {
+      "file": "images/B/晓歌.png",
+      "name": "晓歌"
+    },
+    {
+      "file": "images/B/普罗旺斯.png",
+      "name": "普罗旺斯"
+    },
+    {
+      "file": "images/B/暗索.png",
+      "name": "暗索"
+    },
+    {
+      "file": "images/B/暮落.png",
+      "name": "暮落"
+    },
+    {
+      "file": "images/B/暴行.png",
+      "name": "暴行"
+    },
+    {
+      "file": "images/B/暴雨.png",
+      "name": "暴雨"
+    },
+    {
+      "file": "images/B/月禾.png",
+      "name": "月禾"
+    },
+    {
+      "file": "images/B/月见夜.png",
+      "name": "月见夜"
+    },
+    {
+      "file": "images/B/望.png",
+      "name": "望"
+    },
+    {
+      "file": "images/B/末药.png",
+      "name": "末药"
+    },
+    {
+      "file": "images/B/机械师.png",
+      "name": "机械师"
+    },
+    {
+      "file": "images/B/杏仁.png",
+      "name": "杏仁"
+    },
+    {
+      "file": "images/B/杜宾.png",
+      "name": "杜宾"
+    },
+    {
+      "file": "images/B/杜林.png",
+      "name": "杜林"
+    },
+    {
+      "file": "images/B/杰克.png",
+      "name": "杰克"
+    },
+    {
+      "file": "images/B/杰西卡.png",
+      "name": "杰西卡"
+    },
+    {
+      "file": "images/B/松果.png",
+      "name": "松果"
+    },
+    {
+      "file": "images/B/松桐.png",
+      "name": "松桐"
+    },
+    {
+      "file": "images/B/极光.png",
+      "name": "极光"
+    },
+    {
+      "file": "images/B/极境.png",
+      "name": "极境"
+    },
+    {
+      "file": "images/B/林.png",
+      "name": "林"
+    },
+    {
+      "file": "images/B/柏喙.png",
+      "name": "柏喙"
+    },
+    {
+      "file": "images/B/格劳克斯.png",
+      "name": "格劳克斯"
+    },
+    {
+      "file": "images/B/格拉尼.png",
+      "name": "格拉尼"
+    },
+    {
+      "file": "images/B/格雷伊.png",
+      "name": "格雷伊"
+    },
+    {
+      "file": "images/B/桃金娘.png",
+      "name": "桃金娘"
+    },
+    {
+      "file": "images/B/桑葚.png",
+      "name": "桑葚"
+    },
+    {
+      "file": "images/B/梅.png",
+      "name": "梅"
+    },
+    {
+      "file": "images/B/梅尔.png",
+      "name": "梅尔"
+    },
+    {
+      "file": "images/B/梓兰.png",
+      "name": "梓兰"
+    },
+    {
+      "file": "images/B/棘刺.png",
+      "name": "棘刺"
+    },
+    {
+      "file": "images/B/森蚺.png",
+      "name": "森蚺"
+    },
+    {
+      "file": "images/B/森西.png",
+      "name": "森西"
+    },
+    {
+      "file": "images/B/槐琥.png",
+      "name": "槐琥"
+    },
+    {
+      "file": "images/B/歌蕾蒂娅.png",
+      "name": "歌蕾蒂娅"
+    },
+    {
+      "file": "images/B/止颂.png",
+      "name": "止颂"
+    },
+    {
+      "file": "images/B/正义骑士号.png",
+      "name": "正义骑士号"
+    },
+    {
+      "file": "images/B/死芒.png",
+      "name": "死芒"
+    },
+    {
+      "file": "images/B/水月.png",
+      "name": "水月"
+    },
+    {
+      "file": "images/B/水灯心.png",
+      "name": "水灯心"
+    },
+    {
+      "file": "images/B/泡普卡.png",
+      "name": "泡普卡"
+    },
+    {
+      "file": "images/B/泡泡.png",
+      "name": "泡泡"
+    },
+    {
+      "file": "images/B/波卜.png",
+      "name": "波卜"
+    },
+    {
+      "file": "images/B/波登可.png",
+      "name": "波登可"
+    },
+    {
+      "file": "images/B/泥岩.png",
+      "name": "泥岩"
+    },
+    {
+      "file": "images/B/泰拉大陆调查团.png",
+      "name": "泰拉大陆调查团"
+    },
+    {
+      "file": "images/B/洋灰.png",
+      "name": "洋灰"
+    },
+    {
+      "file": "images/B/洛洛.png",
+      "name": "洛洛"
+    },
+    {
+      "file": "images/B/流明.png",
+      "name": "流明"
+    },
+    {
+      "file": "images/B/流星.png",
+      "name": "流星"
+    },
+    {
+      "file": "images/B/浊心斯卡蒂.png",
+      "name": "浊心斯卡蒂"
+    },
+    {
+      "file": "images/B/海沫.png",
+      "name": "海沫"
+    },
+    {
+      "file": "images/B/海蒂.png",
+      "name": "海蒂"
+    },
+    {
+      "file": "images/B/海霓.png",
+      "name": "海霓"
+    },
+    {
+      "file": "images/B/涤火杰西卡.png",
+      "name": "涤火杰西卡"
+    },
+    {
+      "file": "images/B/淬羽赫默.png",
+      "name": "淬羽赫默"
+    },
+    {
+      "file": "images/B/深巡.png",
+      "name": "深巡"
+    },
+    {
+      "file": "images/B/深律.png",
+      "name": "深律"
+    },
+    {
+      "file": "images/B/深海色.png",
+      "name": "深海色"
+    },
+    {
+      "file": "images/B/深靛.png",
+      "name": "深靛"
+    },
+    {
+      "file": "images/B/清流.png",
+      "name": "清流"
+    },
+    {
+      "file": "images/B/清道夫.png",
+      "name": "清道夫"
+    },
+    {
+      "file": "images/B/渡桥.png",
+      "name": "渡桥"
+    },
+    {
+      "file": "images/B/温米.png",
+      "name": "温米"
+    },
+    {
+      "file": "images/B/温蒂.png",
+      "name": "温蒂"
+    },
+    {
+      "file": "images/B/溯光星源.png",
+      "name": "溯光星源"
+    },
+    {
+      "file": "images/B/澄闪.png",
+      "name": "澄闪"
+    },
+    {
+      "file": "images/B/濯尘芙蓉.png",
+      "name": "濯尘芙蓉"
+    },
+    {
+      "file": "images/B/火哨.png",
+      "name": "火哨"
+    },
+    {
+      "file": "images/B/火神.png",
+      "name": "火神"
+    },
+    {
+      "file": "images/B/火龙S黑角.png",
+      "name": "火龙S黑角"
+    },
+    {
+      "file": "images/B/灰喉.png",
+      "name": "灰喉"
+    },
+    {
+      "file": "images/B/灰毫.png",
+      "name": "灰毫"
+    },
+    {
+      "file": "images/B/灰烬.png",
+      "name": "灰烬"
+    },
+    {
+      "file": "images/B/灵知.png",
+      "name": "灵知"
+    },
+    {
+      "file": "images/B/炎客.png",
+      "name": "炎客"
+    },
+    {
+      "file": "images/B/炎熔.png",
+      "name": "炎熔"
+    },
+    {
+      "file": "images/B/炎狱炎熔.png",
+      "name": "炎狱炎熔"
+    },
+    {
+      "file": "images/B/烈夏.png",
+      "name": "烈夏"
+    },
+    {
+      "file": "images/B/烛煌.png",
+      "name": "烛煌"
+    },
+    {
+      "file": "images/B/焰尾.png",
+      "name": "焰尾"
+    },
+    {
+      "file": "images/B/焰影苇草.png",
+      "name": "焰影苇草"
+    },
+    {
+      "file": "images/B/焰狐龙梓兰.png",
+      "name": "焰狐龙梓兰"
+    },
+    {
+      "file": "images/B/煌.png",
+      "name": "煌"
+    },
+    {
+      "file": "images/B/熔泉.png",
+      "name": "熔泉"
+    },
+    {
+      "file": "images/B/燧石.png",
+      "name": "燧石"
+    },
+    {
+      "file": "images/B/爱丽丝.png",
+      "name": "爱丽丝"
+    },
+    {
+      "file": "images/B/特克诺.png",
+      "name": "特克诺"
+    },
+    {
+      "file": "images/B/特米米.png",
+      "name": "特米米"
+    },
+    {
+      "file": "images/B/狮蝎.png",
+      "name": "狮蝎"
+    },
+    {
+      "file": "images/B/猎蜂.png",
+      "name": "猎蜂"
+    },
+    {
+      "file": "images/B/玛恩纳.png",
+      "name": "玛恩纳"
+    },
+    {
+      "file": "images/B/玛露西尔.png",
+      "name": "玛露西尔"
+    },
+    {
+      "file": "images/B/玫兰莎.png",
+      "name": "玫兰莎"
+    },
+    {
+      "file": "images/B/玫拉.png",
+      "name": "玫拉"
+    },
+    {
+      "file": "images/B/珊比.png",
+      "name": "珊比"
+    },
+    {
+      "file": "images/B/琳琅诗怀雅.png",
+      "name": "琳琅诗怀雅"
+    },
+    {
+      "file": "images/B/琴柳.png",
+      "name": "琴柳"
+    },
+    {
+      "file": "images/B/瑕光.png",
+      "name": "瑕光"
+    },
+    {
+      "file": "images/B/瑰盐.png",
+      "name": "瑰盐"
+    },
+    {
+      "file": "images/B/电弧.png",
+      "name": "电弧"
+    },
+    {
+      "file": "images/B/白金.png",
+      "name": "白金"
+    },
+    {
+      "file": "images/B/白铁.png",
+      "name": "白铁"
+    },
+    {
+      "file": "images/B/白雪.png",
+      "name": "白雪"
+    },
+    {
+      "file": "images/B/白面鸮.png",
+      "name": "白面鸮"
+    },
+    {
+      "file": "images/B/百炼嘉维尔.png",
+      "name": "百炼嘉维尔"
+    },
+    {
+      "file": "images/B/真理.png",
+      "name": "真理"
+    },
+    {
+      "file": "images/B/真言.png",
+      "name": "真言"
+    },
+    {
+      "file": "images/B/矩.png",
+      "name": "矩"
+    },
+    {
+      "file": "images/B/石棉.png",
+      "name": "石棉"
+    },
+    {
+      "file": "images/B/石英.png",
+      "name": "石英"
+    },
+    {
+      "file": "images/B/砾.png",
+      "name": "砾"
+    },
+    {
+      "file": "images/B/祐天寺若麦.png",
+      "name": "祐天寺若麦"
+    },
+    {
+      "file": "images/B/稀音.png",
+      "name": "稀音"
+    },
+    {
+      "file": "images/B/空.png",
+      "name": "空"
+    },
+    {
+      "file": "images/B/空弦.png",
+      "name": "空弦"
+    },
+    {
+      "file": "images/B/空构.png",
+      "name": "空构"
+    },
+    {
+      "file": "images/B/空爆.png",
+      "name": "空爆"
+    },
+    {
+      "file": "images/B/米格鲁.png",
+      "name": "米格鲁"
+    },
+    {
+      "file": "images/B/絮雨.png",
+      "name": "絮雨"
+    },
+    {
+      "file": "images/B/红.png",
+      "name": "红"
+    },
+    {
+      "file": "images/B/红云.png",
+      "name": "红云"
+    },
+    {
+      "file": "images/B/红豆.png",
+      "name": "红豆"
+    },
+    {
+      "file": "images/B/红隼.png",
+      "name": "红隼"
+    },
+    {
+      "file": "images/B/纯烬艾雅法拉.png",
+      "name": "纯烬艾雅法拉"
+    },
+    {
+      "file": "images/B/绮良.png",
+      "name": "绮良"
+    },
+    {
+      "file": "images/B/维什戴尔.png",
+      "name": "维什戴尔"
+    },
+    {
+      "file": "images/B/维伊.png",
+      "name": "维伊"
+    },
+    {
+      "file": "images/B/维娜·维多利亚.png",
+      "name": "维娜·维多利亚"
+    },
+    {
+      "file": "images/B/维荻.png",
+      "name": "维荻"
+    },
+    {
+      "file": "images/B/缄默德克萨斯.png",
+      "name": "缄默德克萨斯"
+    },
+    {
+      "file": "images/B/缇缇.png",
+      "name": "缇缇"
+    },
+    {
+      "file": "images/B/缠丸.png",
+      "name": "缠丸"
+    },
+    {
+      "file": "images/B/缪尔赛思.png",
+      "name": "缪尔赛思"
+    },
+    {
+      "file": "images/B/罗宾.png",
+      "name": "罗宾"
+    },
+    {
+      "file": "images/B/罗小黑.png",
+      "name": "罗小黑"
+    },
+    {
+      "file": "images/B/罗德岛隐秘队.png",
+      "name": "罗德岛隐秘队"
+    },
+    {
+      "file": "images/B/罗比菈塔.png",
+      "name": "罗比菈塔"
+    },
+    {
+      "file": "images/B/羽毛笔.png",
+      "name": "羽毛笔"
+    },
+    {
+      "file": "images/B/翎羽.png",
+      "name": "翎羽"
+    },
+    {
+      "file": "images/B/耀骑士临光.png",
+      "name": "耀骑士临光"
+    },
+    {
+      "file": "images/B/老鲤.png",
+      "name": "老鲤"
+    },
+    {
+      "file": "images/B/耶拉.png",
+      "name": "耶拉"
+    },
+    {
+      "file": "images/B/聆音.png",
+      "name": "聆音"
+    },
+    {
+      "file": "images/B/能天使.png",
+      "name": "能天使"
+    },
+    {
+      "file": "images/B/至简.png",
+      "name": "至简"
+    },
+    {
+      "file": "images/B/艾丝黛尔.png",
+      "name": "艾丝黛尔"
+    },
+    {
+      "file": "images/B/艾丽妮.png",
+      "name": "艾丽妮"
+    },
+    {
+      "file": "images/B/艾拉.png",
+      "name": "艾拉"
+    },
+    {
+      "file": "images/B/艾雅法拉.png",
+      "name": "艾雅法拉"
+    },
+    {
+      "file": "images/B/芙兰卡.png",
+      "name": "芙兰卡"
+    },
+    {
+      "file": "images/B/芙蓉.png",
+      "name": "芙蓉"
+    },
+    {
+      "file": "images/B/芬.png",
+      "name": "芬"
+    },
+    {
+      "file": "images/B/芳汀.png",
+      "name": "芳汀"
+    },
+    {
+      "file": "images/B/苇草.png",
+      "name": "苇草"
+    },
+    {
+      "file": "images/B/苍苔.png",
+      "name": "苍苔"
+    },
+    {
+      "file": "images/B/苏苏洛.png",
+      "name": "苏苏洛"
+    },
+    {
+      "file": "images/B/若叶睦.png",
+      "name": "若叶睦"
+    },
+    {
+      "file": "images/B/苦艾.png",
+      "name": "苦艾"
+    },
+    {
+      "file": "images/B/荒芜拉普兰德.png",
+      "name": "荒芜拉普兰德"
+    },
+    {
+      "file": "images/B/莎草.png",
+      "name": "莎草"
+    },
+    {
+      "file": "images/B/莫斯提马.png",
+      "name": "莫斯提马"
+    },
+    {
+      "file": "images/B/莱伊.png",
+      "name": "莱伊"
+    },
+    {
+      "file": "images/B/莱恩哈特.png",
+      "name": "莱恩哈特"
+    },
+    {
+      "file": "images/B/莱欧斯.png",
+      "name": "莱欧斯"
+    },
+    {
+      "file": "images/B/菲亚梅塔.png",
+      "name": "菲亚梅塔"
+    },
+    {
+      "file": "images/B/菲莱.png",
+      "name": "菲莱"
+    },
+    {
+      "file": "images/B/蒂比.png",
+      "name": "蒂比"
+    },
+    {
+      "file": "images/B/蓝毒.png",
+      "name": "蓝毒"
+    },
+    {
+      "file": "images/B/蕾缪安.png",
+      "name": "蕾缪安"
+    },
+    {
+      "file": "images/B/薄绿.png",
+      "name": "薄绿"
+    },
+    {
+      "file": "images/B/薇薇安娜.png",
+      "name": "薇薇安娜"
+    },
+    {
+      "file": "images/B/蚀清.png",
+      "name": "蚀清"
+    },
+    {
+      "file": "images/B/蛇屠箱.png",
+      "name": "蛇屠箱"
+    },
+    {
+      "file": "images/B/蜜莓.png",
+      "name": "蜜莓"
+    },
+    {
+      "file": "images/B/蜜蜡.png",
+      "name": "蜜蜡"
+    },
+    {
+      "file": "images/B/行箸.png",
+      "name": "行箸"
+    },
+    {
+      "file": "images/B/衡沙.png",
+      "name": "衡沙"
+    },
+    {
+      "file": "images/B/裁度.png",
+      "name": "裁度"
+    },
+    {
+      "file": "images/B/裂响.png",
+      "name": "裂响"
+    },
+    {
+      "file": "images/B/褐果.png",
+      "name": "褐果"
+    },
+    {
+      "file": "images/B/见行者.png",
+      "name": "见行者"
+    },
+    {
+      "file": "images/B/角峰.png",
+      "name": "角峰"
+    },
+    {
+      "file": "images/B/讯使.png",
+      "name": "讯使"
+    },
+    {
+      "file": "images/B/诗怀雅.png",
+      "name": "诗怀雅"
+    },
+    {
+      "file": "images/B/诺威尔.png",
+      "name": "诺威尔"
+    },
+    {
+      "file": "images/B/调香师.png",
+      "name": "调香师"
+    },
+    {
+      "file": "images/B/谜图.png",
+      "name": "谜图"
+    },
+    {
+      "file": "images/B/谬因.png",
+      "name": "谬因"
+    },
+    {
+      "file": "images/B/豆苗.png",
+      "name": "豆苗"
+    },
+    {
+      "file": "images/B/贝娜.png",
+      "name": "贝娜"
+    },
+    {
+      "file": "images/B/贝洛内.png",
+      "name": "贝洛内"
+    },
+    {
+      "file": "images/B/贾维.png",
+      "name": "贾维"
+    },
+    {
+      "file": "images/B/赤冬.png",
+      "name": "赤冬"
+    },
+    {
+      "file": "images/B/赤刃明霄陈.png",
+      "name": "赤刃明霄陈"
+    },
+    {
+      "file": "images/B/赫德雷.png",
+      "name": "赫德雷"
+    },
+    {
+      "file": "images/B/赫拉格.png",
+      "name": "赫拉格"
+    },
+    {
+      "file": "images/B/赫默.png",
+      "name": "赫默"
+    },
+    {
+      "file": "images/B/跃跃.png",
+      "name": "跃跃"
+    },
+    {
+      "file": "images/B/车尔尼.png",
+      "name": "车尔尼"
+    },
+    {
+      "file": "images/B/达格达.png",
+      "name": "达格达"
+    },
+    {
+      "file": "images/B/远山.png",
+      "name": "远山"
+    },
+    {
+      "file": "images/B/远牙.png",
+      "name": "远牙"
+    },
+    {
+      "file": "images/B/迷迭香.png",
+      "name": "迷迭香"
+    },
+    {
+      "file": "images/B/送葬人.png",
+      "name": "送葬人"
+    },
+    {
+      "file": "images/B/逻各斯.png",
+      "name": "逻各斯"
+    },
+    {
+      "file": "images/B/遥.png",
+      "name": "遥"
+    },
+    {
+      "file": "images/B/酒神.png",
+      "name": "酒神"
+    },
+    {
+      "file": "images/B/酸糖.png",
+      "name": "酸糖"
+    },
+    {
+      "file": "images/B/重岳.png",
+      "name": "重岳"
+    },
+    {
+      "file": "images/B/野鬃.png",
+      "name": "野鬃"
+    },
+    {
+      "file": "images/B/钼铅.png",
+      "name": "钼铅"
+    },
+    {
+      "file": "images/B/铃兰.png",
+      "name": "铃兰"
+    },
+    {
+      "file": "images/B/铅踝.png",
+      "name": "铅踝"
+    },
+    {
+      "file": "images/B/铎铃.png",
+      "name": "铎铃"
+    },
+    {
+      "file": "images/B/银灰.png",
+      "name": "银灰"
+    },
+    {
+      "file": "images/B/铸铁.png",
+      "name": "铸铁"
+    },
+    {
+      "file": "images/B/锏.png",
+      "name": "锏"
+    },
+    {
+      "file": "images/B/锡人.png",
+      "name": "锡人"
+    },
+    {
+      "file": "images/B/锡兰.png",
+      "name": "锡兰"
+    },
+    {
+      "file": "images/B/闪击.png",
+      "name": "闪击"
+    },
+    {
+      "file": "images/B/闪灵.png",
+      "name": "闪灵"
+    },
+    {
+      "file": "images/B/阿.png",
+      "name": "阿"
+    },
+    {
+      "file": "images/B/阿兰娜.png",
+      "name": "阿兰娜"
+    },
+    {
+      "file": "images/B/阿斯卡纶.png",
+      "name": "阿斯卡纶"
+    },
+    {
+      "file": "images/B/阿消.png",
+      "name": "阿消"
+    },
+    {
+      "file": "images/B/阿米娅.png",
+      "name": "阿米娅"
+    },
+    {
+      "file": "images/B/阿罗玛.png",
+      "name": "阿罗玛"
+    },
+    {
+      "file": "images/B/陈.png",
+      "name": "陈"
+    },
+    {
+      "file": "images/B/陨星.png",
+      "name": "陨星"
+    },
+    {
+      "file": "images/B/隐德来希.png",
+      "name": "隐德来希"
+    },
+    {
+      "file": "images/B/隐现.png",
+      "name": "隐现"
+    },
+    {
+      "file": "images/B/雪猎.png",
+      "name": "雪猎"
+    },
+    {
+      "file": "images/B/雪绒.png",
+      "name": "雪绒"
+    },
+    {
+      "file": "images/B/雪雉.png",
+      "name": "雪雉"
+    },
+    {
+      "file": "images/B/雷狼龙S空爆.png",
+      "name": "雷狼龙S空爆"
+    },
+    {
+      "file": "images/B/雷蛇.png",
+      "name": "雷蛇"
+    },
+    {
+      "file": "images/B/霍尔海雅.png",
+      "name": "霍尔海雅"
+    },
+    {
+      "file": "images/B/霜华.png",
+      "name": "霜华"
+    },
+    {
+      "file": "images/B/霜叶.png",
+      "name": "霜叶"
+    },
+    {
+      "file": "images/B/露托.png",
+      "name": "露托"
+    },
+    {
+      "file": "images/B/青枳.png",
+      "name": "青枳"
+    },
+    {
+      "file": "images/B/鞭刃.png",
+      "name": "鞭刃"
+    },
+    {
+      "file": "images/B/风丸.png",
+      "name": "风丸"
+    },
+    {
+      "file": "images/B/风笛.png",
+      "name": "风笛"
+    },
+    {
+      "file": "images/B/风絮.png",
+      "name": "风絮"
+    },
+    {
+      "file": "images/B/食铁兽.png",
+      "name": "食铁兽"
+    },
+    {
+      "file": "images/B/香草.png",
+      "name": "香草"
+    },
+    {
+      "file": "images/B/骋风.png",
+      "name": "骋风"
+    },
+    {
+      "file": "images/B/魔王.png",
+      "name": "魔王"
+    },
+    {
+      "file": "images/B/鸿雪.png",
+      "name": "鸿雪"
+    },
+    {
+      "file": "images/B/麒麟R夜刀.png",
+      "name": "麒麟R夜刀"
+    },
+    {
+      "file": "images/B/麦哲伦.png",
+      "name": "麦哲伦"
+    },
+    {
+      "file": "images/B/黍.png",
+      "name": "黍"
+    },
+    {
+      "file": "images/B/黑.png",
+      "name": "黑"
+    },
+    {
+      "file": "images/B/黑角.png",
+      "name": "黑角"
+    },
+    {
+      "file": "images/B/黑键.png",
+      "name": "黑键"
+    },
+    {
+      "file": "images/B/齐尔查克.png",
+      "name": "齐尔查克"
+    },
+    {
+      "file": "images/B/龙舌兰.png",
+      "name": "龙舌兰"
+    }
+  ]
+};
+            // ================================================
+            
+            renderGrid('a');
+            renderGrid('b');
+        }
+
+        function init() {
+            loadImages();
+        }
+
+        function renderGrid(type, filter = '') {
+            const grid = document.getElementById('grid' + type.toUpperCase());
+            grid.innerHTML = '';
+            let list = presetImages[type] || [];
+            if (filter) {
+                list = list.filter(item => (item.name || '').toLowerCase().includes(filter.toLowerCase()));
+            }
+            if (list.length === 0) {
+                grid.innerHTML = '<div style="grid-column:1/-1;color:#444;font-size:12px;padding:16px;text-align:center;">无图片</div>';
+                return;
+            }
+            list.forEach((item) => {
+                const div = document.createElement('div');
+                div.className = 'preset-item';
+                div.setAttribute('data-name', item.name || '未命名');
+                div.title = item.name || '';
+                div.onclick = () => applyImage(type, item.file);
+                const img = document.createElement('img');
+                img.src = item.file;
+                img.alt = item.name || '';
+                img.onerror = () => {
+                    div.innerHTML = '<span style="color:#444;font-size:10px;display:flex;align-items:center;justify-content:center;height:100%;">' + (item.name || '?') + '</span>';
+                };
+                div.appendChild(img);
+                grid.appendChild(div);
+            });
+        }
+
+        function filterImages(type, keyword) {
+            renderGrid(type, keyword);
+        }
+
+        // =====================================================
+        // 选择拼图区
+        // =====================================================
+        function selectPuzzle(id) {
+            // 移除所有旧选中状态
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById('puzzle-' + i).classList.remove('active');
+            }
+            document.getElementById('puzzle-' + id).classList.add('active');
+            currentPuzzleId = id;
+        }
+
+        // =====================================================
+        // 应用图片到当前选中的拼图区
+        // =====================================================
+        function applyImage(type, src) {
+            if (!currentPuzzleId) {
+                alert('请先点击左侧任意一个拼图区');
+                return;
+            }
+            puzzleData[currentPuzzleId][type] = src;
+            const placeholder = document.querySelector('#puzzle-' + currentPuzzleId + ' .placeholder');
+
+            if (type === 'a') {
+                const canvas = document.getElementById('canvasA-' + currentPuzzleId);
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                    // ① 原图绘制到隐藏的 24×24 canvas
+                    const hidden = document.createElement('canvas');
+                    hidden.width = 24; hidden.height = 24;
+                    hidden.getContext('2d').drawImage(img, 0, 0, 24, 24);
+                    
+                    // ② 24×24 canvas 放大绘制到 48×48，关闭平滑保持像素感
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.clearRect(0, 0, 48, 48);
+                    ctx.drawImage(hidden, 0, 0, 48, 48);
+                    
+                    canvas.style.display = 'block';
+                    if (placeholder) placeholder.style.display = 'none';
+                };
+                img.src = src;
+            } else {
+                const canvas = document.getElementById('canvasB-' + currentPuzzleId);
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                    const scale = 0.28;  // 缩小25%
+                    const w = Math.round(img.naturalWidth * scale);
+                    const h = Math.round(img.naturalHeight * scale);
+                    canvas.width = w;
+                    canvas.height = h;
+                    ctx.clearRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+                    canvas.style.display = 'block';
+                    if (placeholder) placeholder.style.display = 'none';
+                };
+                img.src = src;
+            }
+        }
+
+        // =====================================================
+        // 本地上传 (仅A区)
+        // =====================================================
+        function handleUpload(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('请选择图片文件');
+                return;
+            }
+            if (!currentPuzzleId) {
+                alert('请先点击左侧一个拼图区');
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                applyImage(type, e.target.result);
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        // =====================================================
+        // 截图生成
+        // =====================================================
+        async function capture() {
+            const area = document.getElementById('captureArea');
+            const btn = document.querySelector('.btn-primary');
+            const orig = btn.innerText;
+            btn.innerText = '生成中...';
+            btn.disabled = true;
+
+            try {
+                const canvas = await html2canvas(area, {
+                    backgroundColor: '#0a0a0a',  // 黑底
+                    scale: 2,                     // 2倍高清
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false
+                });
+
+                captureDataUrl = canvas.toDataURL('image/png');
+                document.getElementById('previewImg').src = captureDataUrl;
+                document.getElementById('modal').classList.add('active');
+            } catch (err) {
+                console.error(err);
+                alert('生成失败，请检查图片是否正常加载');
+            } finally {
+                btn.innerText = orig;
+                btn.disabled = false;
+            }
+        }
+
+        function downloadImage() {
+            if (!captureDataUrl) return;
+            const a = document.createElement('a');
+            a.download = 'FGO怪东西问卷_' + Date.now() + '.png';
+            a.href = captureDataUrl;
+            a.click();
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function resetAll() {
+            if (!confirm('确定要清空所有拼图和文字吗？')) return;
+            for (let i = 1; i <= 6; i++) {
+                puzzleData[i] = { a: null, b: null };
+                document.getElementById('canvasA-' + i).style.display = 'none';   // ← 改
+                document.getElementById('canvasB-' + i).style.display = 'none';   // ← 改                document.getElementById('text-' + i).value = '';
+                const ph = document.querySelector('#puzzle-' + i + ' .placeholder');
+                if (ph) ph.style.display = 'flex';
+                document.getElementById('puzzle-' + i).classList.remove('active');
+            }
+            document.getElementById('nameInput').value = '';
+            currentPuzzleId = null;
+        }
+
+        // 点击遮罩关闭弹窗
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('modal')) closeModal();
+        });
+        // ESC 关闭弹窗
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        init();
+                
+        document.querySelectorAll('.text-cell textarea').forEach(ta => {
+            ta.addEventListener('input', function() {
+                this.style.fontSize = '24px';
+                this.style.height = 100;
+                const maxH = this.parentElement.clientHeight;
+                while (this.scrollHeight > maxH && parseInt(this.style.fontSize) > 10) {
+                    this.style.fontSize = (parseInt(this.style.fontSize) - 1) + 'px';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
