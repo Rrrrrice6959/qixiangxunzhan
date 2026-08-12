@@ -1405,6 +1405,8 @@
                     ctx.clearRect(0, 0, 48, 48);
                     ctx.drawImage(hidden, 0, 0, 48, 48);
                     canvas.style.display = 'block';
+                    const tapA = document.querySelector('#puzzle-' + currentPuzzleId + ' .m-tap-a');
+if (tapA) tapA.style.display = 'none';
                     if (placeholder) placeholder.style.display = 'none';
                 };
                 img.src = src;
@@ -1421,6 +1423,8 @@
                     ctx.clearRect(0, 0, w, h);
                     ctx.drawImage(img, 0, 0, w, h);
                     canvas.style.display = 'block';
+                    const tapB = document.querySelector('#puzzle-' + currentPuzzleId + ' .m-tap-b');
+if (tapB) tapB.style.display = 'none';
                     if (placeholder) placeholder.style.display = 'none';
                 };
                 img.src = src;
@@ -1615,6 +1619,10 @@
                 document.getElementById('text-' + i).value = '';
                 const ph = document.querySelector('#puzzle-' + i + ' .placeholder');
                 if (ph) ph.style.display = 'flex';
+                const tapA = document.querySelector('#puzzle-' + i + ' .m-tap-a');
+const tapB = document.querySelector('#puzzle-' + i + ' .m-tap-b');
+if (tapA) tapA.style.display = '';
+if (tapB) tapB.style.display = '';
                 document.getElementById('puzzle-' + i).classList.remove('active', 'tapping-a', 'tapping-b');
             }
             document.getElementById('nameInput').value = '';
