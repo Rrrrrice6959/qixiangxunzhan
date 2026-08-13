@@ -284,7 +284,8 @@
             line-height: 1.4;
             font-family: inherit;
             overflow: hidden;
-            word-break: break-all; 
+word-break: break-all;
+white-space: pre-wrap;
             text-align: left;
             appearance: none;
         }
@@ -1565,14 +1566,6 @@ if (tapB) tapB.style.display = 'none';
             btn.innerText = '生成中...';
             btn.disabled = true;
 
-            // 临时展开 textarea，防止截图时文字被截断
-const textareas = document.querySelectorAll('.text-cell textarea');
-const taBackup = [];
-textareas.forEach(ta => {
-    taBackup.push({ el: ta, overflow: ta.style.overflow });
-    ta.style.overflow = 'visible';   // 让溢出内容被 html2canvas 渲染出来
-});
-
             const origTransform = scaler.style.transform;
             const origWrapperHeight = wrapper.style.height;
             const isMobile = window.innerWidth <= 768;
@@ -1585,13 +1578,20 @@ textareas.forEach(ta => {
 
 
             try {
-                const canvas = await html2canvas(area, {
-                    backgroundColor: '#0a0a0a',
-                    scale: 2,
-                    useCORS: true,
-                    allowTaint: true,
-                    logging: false
-                });
+const canvas = await html2canvas(area, {
+    backgroundColor: '#0a0a0a',
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    logging: false,
+    onclone: (clonedDoc) => {
+        clonedDoc.querySelectorAll('.text-cell textarea').forEach(ta => {
+            ta.style.overflow = 'visible';
+            ta.style.wordBreak = 'break-all';
+            ta.style.whiteSpace = 'pre-wrap';
+        });
+    }
+});
                 captureDataUrl = canvas.toDataURL('image/png');
                 document.getElementById('previewImg').src = captureDataUrl;
                 document.getElementById('modal').classList.add('active');
@@ -1606,10 +1606,7 @@ textareas.forEach(ta => {
         scaler.style.transform = origTransform;
         wrapper.style.height = origWrapperHeight;
     }
-    // ← 就加在这里
-taBackup.forEach(item => {
-    item.el.style.overflow = item.overflow;
-});
+
 }
         }
 
