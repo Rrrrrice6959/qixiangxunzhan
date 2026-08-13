@@ -1586,9 +1586,29 @@ const canvas = await html2canvas(area, {
     logging: false,
     onclone: (clonedDoc) => {
         clonedDoc.querySelectorAll('.text-cell textarea').forEach(ta => {
-            ta.style.overflow = 'visible';
-            ta.style.wordBreak = 'break-all';
-            ta.style.whiteSpace = 'pre-wrap';
+            const div = clonedDoc.createElement('div');
+            // 复制 inline 样式（包括你动态缩小的 font-size）
+            div.style.cssText = ta.style.cssText;
+            
+            // 覆盖成 div 安全样式
+            div.style.width = '100%';
+            div.style.height = '100%';
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.overflow = 'visible';
+            div.style.wordBreak = 'break-all';
+            div.style.whiteSpace = 'pre-wrap';
+            div.style.background = 'transparent';
+            div.style.border = 'none';
+            div.style.resize = 'none';
+            div.style.outline = 'none';
+            div.style.appearance = 'none';
+            div.style.boxSizing = 'border-box';
+            div.style.lineHeight = '1.4';
+            div.style.color = '#ffffff';
+            
+            div.textContent = ta.value;
+            ta.parentNode.replaceChild(div, ta);
         });
     }
 });
