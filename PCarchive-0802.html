@@ -44,23 +44,22 @@
             overflow: hidden;
         }
 
-.canvas-scaler {
-    width: 675px;
-    height: 900px;
-    transform-origin: top center;
-    flex-shrink: 0;
-    border-radius: 8px;                    /* 从 .canvas-area 移过来 */
-    overflow: hidden;                      /* 从 .canvas-area 移过来 */
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5); /* 从 .canvas-area 移过来 */
-}
+        .canvas-scaler {
+            width: 675px;
+            height: 900px;
+            transform-origin: top center;
+            flex-shrink: 0;
+        }
 
-.canvas-area {
-    width: 100%;
-    height: 100%;
-    background: #0a0a0a;
-    position: relative;
-    /* 删掉原来的 border-radius、overflow、box-shadow */
-}
+        .canvas-area {
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
 
         /* ----- 顶部标题区 ----- */
         .canvas-header {
@@ -284,8 +283,9 @@
             line-height: 1.4;
             font-family: inherit;
             overflow: hidden;
-            word-break: break-all; 
             text-align: left;
+            display: flex;
+            align-items: center;
             appearance: none;
         }
         .text-cell textarea:focus {
@@ -1565,24 +1565,14 @@ if (tapB) tapB.style.display = 'none';
             btn.innerText = '生成中...';
             btn.disabled = true;
 
-            // 临时展开 textarea，防止截图时文字被截断
-const textareas = document.querySelectorAll('.text-cell textarea');
-const taBackup = [];
-textareas.forEach(ta => {
-    taBackup.push({ el: ta, overflow: ta.style.overflow });
-    ta.style.overflow = 'visible';   // 让溢出内容被 html2canvas 渲染出来
-});
-
             const origTransform = scaler.style.transform;
             const origWrapperHeight = wrapper.style.height;
             const isMobile = window.innerWidth <= 768;
 
             if (isMobile) {
-    scaler.style.transform = 'none';
-    wrapper.style.height = '900px';
-}
-
-
+                scaler.style.transform = 'none';
+                wrapper.style.height = '900px';
+            }
 
             try {
                 const canvas = await html2canvas(area, {
@@ -1598,19 +1588,14 @@ textareas.forEach(ta => {
             } catch (err) {
                 console.error(err);
                 alert('生成失败，请检查图片是否正常加载');
-} finally {
-    btn.innerText = orig;
-    btn.disabled = false;
-    // 恢复缩放
-    if (isMobile) {
-        scaler.style.transform = origTransform;
-        wrapper.style.height = origWrapperHeight;
-    }
-    // ← 就加在这里
-taBackup.forEach(item => {
-    item.el.style.overflow = item.overflow;
-});
-}
+            } finally {
+                btn.innerText = orig;
+                btn.disabled = false;
+                if (isMobile) {
+                    scaler.style.transform = origTransform;
+                    wrapper.style.height = origWrapperHeight;
+                }
+            }
         }
 
         function downloadImage() {
