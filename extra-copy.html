@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奇象巡展 × FGO 怪东西问卷</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* ========== 基础重置 ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --ak-bg: #07090c;
+            --ak-panel: rgba(9, 13, 18, 0.88);
+            --ak-panel-2: #0d1218;
+            --ak-line: rgba(255, 255, 255, 0.16);
+            --ak-line-strong: rgba(255, 255, 255, 0.32);
+            --ak-text: #f4f7fa;
+            --ak-muted: #8b96a3;
+            --ak-cyan: #18c8ff;
+            --ak-yellow: #ffd33d;
+            --ak-red: #ff3b5b;
+        }
+
+        html { background: #07090c; }
+
+        body {
+            font-family: "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background:
+                radial-gradient(circle at 18% 0%, rgba(24, 200, 255, 0.12), transparent 34%),
+                radial-gradient(circle at 88% 12%, rgba(255, 211, 61, 0.08), transparent 30%),
+                linear-gradient(135deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 26px),
+                linear-gradient(45deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 32px),
+                #07090c;
+            color: var(--ak-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                linear-gradient(90deg, transparent 0 49%, rgba(24,200,255,0.12) 49% 50%, transparent 50% 100%) left top / 240px 240px no-repeat,
+                repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 5px);
+            opacity: 0.45;
+            mix-blend-mode: screen;
+        }
+
+        ::selection { background: rgba(24, 200, 255, 0.32); color: #ffffff; }
+
+        /* ========== 主布局：左画布 + 右工作区 ========== */
+        .main-layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            justify-content: center;
+            width: 100%;
+            max-width: 1200px;
+            height: calc(100vh - 24px);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ========== 左侧：画布区 ========== */
+        .canvas-wrapper {
+            width: 675px;
+            height: 900px;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow: hidden;
+        }
+
+        .canvas-scaler {
+            width: 675px;
+            height: 900px;
+            transform-origin: top center;
+            flex-shrink: 0;
+            border-radius: 2px;
+            overflow: hidden;
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,0.14),
+                0 0 0 2px rgba(0,0,0,0.85),
+                0 24px 60px rgba(0,0,0,0.58);
+            background: #0a0a0a;
+        }
+
+.canvas-area {
+    width: 100%;
+    height: 100%;
+    background: #0a0a0a;
+    position: relative;
+}
+
+.canvas-area::after {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    pointer-events: none;
+}
+        .canvas-area::after {
+            right: 14px; bottom: 12px;
+            width: 54px; height: 54px;
+            border-right: 2px solid rgba(24,200,255,0.62);
+            border-bottom: 2px solid rgba(24,200,255,0.62);
+            opacity: 0.55;
+        }
+
+        /* ----- 顶部标题区 ----- */
+        .canvas-header {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 14%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0));
+            z-index: 1;
+        }
+        .canvas-header h2 {
+            font-size: 32px;
+            margin-top: 1.5vw;
+            margin-bottom: 1%;
+            letter-spacing: 4px;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0 0 18px rgba(24,200,255,0.18);
+        }
+        .canvas-header .subtitle {
+            font-size: 24px;
+            color: #aab4c0;
+            margin-bottom: 2%;
+            letter-spacing: 8px;
+            font-weight: 600;
+        }
+        .canvas-header .name-line {
+            font-size: 18px;
+            color: #c7d0da;
+            letter-spacing: 1px;
+        }
+        .canvas-header .name-line input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.42);
+            color: #fff;
+            font-size: 20px;
+            width: 45%;
+            outline: none;
+            padding: 1px 4px;
+            font-family: inherit;
+        }
+        .canvas-header .name-line input:focus {
+            border-bottom-color: #18c8ff;
+        }
+
+        /* ----- 主体内容区 ----- */
+        .canvas-body {
+            position: absolute;
+            top: 14%; left: 0;
+            width: 100%;
+            height: 86%;
+            display: flex;
+            padding: 4% 3% 3% 3%;
+            gap: 3%;
+            z-index: 1;
+        }
+
+        .half-zone {
+            width: 48%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0%;
+        }
+
+        .row {
+            flex: 1;
+            display: flex;
+            gap: 4%;
+            align-items: center;
+        }
+
+        /* 拼图区 */
+        .puzzle-cell {
+            height: 95%;
+            aspect-ratio: 2 / 3;
+            border-radius: 0;
+            overflow: hidden;
+            position: relative;
+            background: url("images/background.png") center/cover no-repeat, #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.20);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.72);
+        }
+        .puzzle-cell:hover {
+            border-color: rgba(255,255,255,0.46);
+        }
+        .puzzle-cell.active {
+            border-color: #18c8ff;
+            box-shadow:
+                inset 0 0 0 1px rgba(0,0,0,0.72),
+                0 0 0 1px rgba(24,200,255,0.72),
+                0 0 20px rgba(24,200,255,0.20);
+        }
+        /* 找到这段，整块替换 */
+        .puzzle-cell .placeholder {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: clamp(8px, 1.4vw, 13px);
+            text-align: center;
+            padding: 10%;
+            pointer-events: none;
+            line-height: 1.8;
+            letter-spacing: 1px;
+            text-shadow:
+                -1px -1px 0 #000,
+                 1px -1px 0 #000,
+                -1px  1px 0 #000,
+                 1px  1px 0 #000,
+                 0 2px 6px rgba(0,0,0,0.8);
+        }
+
+        /* 移动端热区：默认隐藏 */
+        .m-tap-a, .m-tap-b {
+            display: none;
+            position: absolute;
+            left: 0;
+            width: 100%;
+            z-index: 20;
+            cursor: pointer;
+        }
+        .m-tap-a { top: 0; height: 50%; }
+        .m-tap-b { bottom: 0; height: 50%; }
+        .m-tap-a::after, .m-tap-b::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            border-radius: 0;
+            background: #18c8ff;
+            border: 1px solid #001018;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.42), 0 0 16px rgba(24,200,255,0.34);
+        }
+                /* 新增：已选图后，热区保留可点，A/B 标缩到右上角 */
+        .m-tap-a.filled::after, .m-tap-b.filled::after {
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            line-height: 18px;
+            left: auto;
+            right: 4px;
+            top: 4px;
+            transform: none;
+            opacity: 0.55;
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
+        }
+        .m-tap-a::after {
+            content: 'A';
+            color: #001018;
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 30px;
+            text-align: center;
+        }
+        .m-tap-b::after {
+            content: 'B';
+            color: #001018;
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 30px;
+            text-align: center;
+            background: #ffd33d;
+        }
+
+        /* 拼图区内部 A区 */
+        .puzzle-a {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border-radius: 0;
+            overflow: hidden;
+        }
+        .puzzle-a canvas {
+            width: 48px;
+            height: 48px;
+            position: absolute;
+            left: 50%;
+            top: 31px;
+            transform: translateX(-50%);
+            image-rendering: pixelated;
+        }
+        .puzzle-a img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* 拼图区内部 B区 */
+        .puzzle-b {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .puzzle-b canvas {
+            position: absolute;
+            bottom: 26px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+        }
+        .puzzle-b img {
+            width: 100%; height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .puzzle-mask-c, .puzzle-mask-d {
+            position: absolute;
+            z-index: 5;
+            background: #0a0a0a;
+            display: none;
+        }
+
+        /* 文字输入区 */
+        .text-cell {
+            flex: 1;
+            height: 95%;
+            display: flex;
+            align-items: center;
+        }
+        .text-cell textarea {
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.045);
+            border: 1px solid rgba(255,255,255,0.16);
+            border-radius: 0;
+            color: #ffffff;
+            padding: 0 8px;
+            font-size: 24px;
+            resize: none;
+            outline: none;
+            line-height: 1.4;
+            font-family: inherit;
+            overflow: hidden;
+            word-break: break-all;
+            white-space: pre-wrap;
+            text-align: left;
+            appearance: none;
+        }
+        .text-cell textarea:focus {
+            border-color: #18c8ff;
+            background: rgba(24, 200, 255, 0.055);
+        }
+        .text-cell textarea::placeholder {
+            color: #3d4650;
+            display: flex;
+            align-items: center;
+        }
+
+        /* ========== 右侧：工作区 ========== */
+        .workspace {
+            height: 900px;
+            flex: 1;
+            max-width: 420px;
+            min-width: 260px;
+            overflow: hidden;
+            padding-right: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tool-section {
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012)),
+                var(--ak-panel);
+            border-radius: 0;
+            padding: 12px 14px;
+            border: 1px solid var(--ak-line);
+            margin-bottom: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            position: relative;
+            clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+            box-shadow: 0 18px 44px rgba(0,0,0,0.36);
+        }
+        .tool-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 44px; height: 3px;
+            background: var(--ak-cyan);
+            box-shadow: 56px 0 0 rgba(255,211,61,0.9);
+        }
+        .tool-section h3 {
+            color: #eef6fb;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.10em;
+            padding: 2px 0 9px;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            text-transform: uppercase;
+        }
+        #toolB { height: 405px; }
+        #toolA { height: 301px; }
+        .tool-section:last-child {
+            height: 150px;
+            flex-shrink: 0;
+            justify-content: center;
+        }
+
+        .section-content {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            margin: 8px 0 6px;
+            padding-right: 2px;
+        }
+        .section-content::-webkit-scrollbar { width: 4px; }
+        .section-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+        .section-content::-webkit-scrollbar-thumb { background: #2f3a46; border-radius: 0; }
+        .section-content::-webkit-scrollbar-thumb:hover { background: var(--ak-cyan); }
+
+        .search-box {
+            width: 100%;
+            padding: 7px 10px;
+            background: #070b10;
+            border: 1px solid var(--ak-line);
+            border-radius: 0;
+            color: #d7e0e8;
+            font-size: 12px;
+            outline: none;
+            margin: 0.8em 0;
+            letter-spacing: 0.04em;
+        }
+        .search-box:focus { border-color: var(--ak-cyan); box-shadow: 0 0 0 1px rgba(24,200,255,0.26); }
+        .search-box::placeholder { color: #56616d; }
+
+        #gridB {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, calc(15vh * 2 / 3));
+            gap: 7px;
+            justify-content: center;
+        }
+        #gridB .preset-item {
+            height: 15vh;
+            width: calc(15vh * 2 / 3);
+            aspect-ratio: 2 / 3;
+            border-radius: 0;
+        }
+
+        #gridA {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 6vh);
+            gap: 7px;
+            justify-content: center;
+        }
+        #gridA .preset-item {
+            height: 6vh;
+            width: 6vh;
+            aspect-ratio: 1 / 1;
+            border-radius: 0;
+        }
+
+        .preset-item {
+            overflow: hidden;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.12);
+            transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+            background: #070b10;
+            position: relative;
+        }
+        .preset-item:hover {
+            border-color: var(--ak-cyan);
+            transform: translateY(-1px);
+            box-shadow: 0 0 0 1px rgba(24,200,255,0.28), 0 8px 18px rgba(0,0,0,0.28);
+        }
+        .preset-item.selected { border-color: var(--ak-yellow); box-shadow: 0 0 0 1px rgba(255,211,61,0.36); }
+        .preset-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .preset-item::after {
+            content: attr(data-name);
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.86);
+            color: #fff;
+            font-size: 10px;
+            padding: 3px 4px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 0;
+            transition: opacity 0.18s ease;
+            pointer-events: none;
+            border-top: 1px solid rgba(24,200,255,0.36);
+        }
+        .preset-item:hover::after { opacity: 1; }
+
+        .upload-btn {
+            display: block; width: 100%;
+            padding: 9px 10px;
+            background: var(--ak-cyan);
+            color: #001018;
+            border: 1px solid #001018;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+            margin: 0.5em 0;
+            clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+        }
+        .upload-btn:hover { background: #ffffff; color: #001018; }
+
+        .hint {
+            font-size: 11px;
+            color: #6f7a86;
+            margin-top: 6px;
+            line-height: 1.5;
+            letter-spacing: 0.02em;
+        }
+
+        .action-buttons { display: flex; gap: 8px; margin-top: 4px; }
+        .btn {
+            flex: 1;
+            padding: 11px 10px;
+            border: 1px solid transparent;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+            margin: 0.5em 0;
+            clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary { background: var(--ak-yellow); color: #101010; border-color: #000000; }
+        .btn-primary:hover { background: #ffffff; color: #000000; }
+        .btn-secondary { background: #10161d; color: #aebbc8; border-color: var(--ak-line); }
+        .btn-secondary:hover { color: #ffffff; border-color: var(--ak-cyan); }
+        .btn:disabled { opacity: 0.55; cursor: wait; transform: none; }
+
+        input[type="file"] { display: none; }
+
+        /* ========== 页脚声明 ========== */
+        .site-footer {
+            width: 100%;
+            max-width: 1200px;
+            position: relative;
+            z-index: 1;
+            margin-top: 14px;
+            padding: 12px 14px 16px;
+            border-top: 1px solid rgba(255,255,255,0.14);
+            color: rgba(226, 233, 240, 0.52);
+            font-size: 11px;
+            line-height: 1.8;
+            letter-spacing: 0.04em;
+            text-align: center;
+        }
+
+        /* ========== 快照预览弹窗 ========== */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.92);
+            display: none; align-items: center; justify-content: center;
+            z-index: 1000; padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: #0b1117;
+            border-radius: 0;
+            padding: 16px;
+            max-width: 480px; width: 100%; text-align: center;
+            border: 1px solid var(--ak-line-strong);
+            clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+        }
+        .modal-content h3 { margin-bottom: 12px; letter-spacing: 0.12em; font-size: 15px; }
+        .modal-content img { max-width: 100%; border-radius: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.16), 0 10px 34px rgba(0,0,0,0.5); }
+        .modal-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: center; }
+
+        /* ========== 移动端底部选择弹窗 ========== */
+        .mobile-picker-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.68);
+            display: none;
+            z-index: 2000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .mobile-picker-overlay.active { display: flex; }
+        .mobile-picker-panel {
+            width: 100%;
+            max-width: 480px;
+            background: #0b1117;
+            border-radius: 0;
+            border: 1px solid var(--ak-line-strong);
+            border-bottom: none;
+            padding: 16px;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.25s ease-out;
+            box-shadow: 0 -20px 60px rgba(0,0,0,0.5);
+        }
+        .mobile-picker-overlay.active .mobile-picker-panel { transform: translateY(0); }
+        .mobile-picker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.14);
+        }
+        .mobile-picker-header h3 {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.10em;
+        }
+        .mobile-picker-close {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.18);
+            color: #9aa6b2;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0 8px;
+            line-height: 1;
+        }
+        .mobile-picker-close:hover { color: #fff; border-color: var(--ak-cyan); }
+        .mobile-picker-body {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        .mobile-picker-body::-webkit-scrollbar { width: 4px; }
+        .mobile-picker-body::-webkit-scrollbar-thumb { background: #2f3a46; border-radius: 0; }
+        .mobile-picker-search {
+            width: 100%;
+            padding: 9px 12px;
+            background: #070b10;
+            border: 1px solid var(--ak-line);
+            border-radius: 0;
+            color: #d7e0e8;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 10px;
+        }
+        .mobile-picker-search:focus { border-color: var(--ak-cyan); }
+        .mobile-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+            gap: 8px;
+            padding-bottom: 10px;
+        }
+        .mobile-picker-grid .preset-item {
+            aspect-ratio: 1 / 1;
+            border-radius: 0;
+            height: auto;
+            width: auto;
+        }
+        .mobile-picker-grid .preset-item[data-ratio="2/3"] { aspect-ratio: 2 / 3; }
+        .mobile-upload-area {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.14);
+        }
+
+        /* ========== 移动端适配 ========== */
+        @media (max-width: 768px) {
+            body { overflow-y: auto; padding: 10px; }
+
+            .main-layout {
+                flex-direction: column;
+                height: auto;
+                gap: 14px;
+                align-items: center;
+            }
+
+            .canvas-wrapper {
+                width: 100%;
+                max-width: 675px;
+                height: auto;
+                min-height: 0;
+                overflow: visible;
+            }
+
+            .workspace {
+                display: block !important;
+                width: 100% !important;
+                max-width: 675px;
+                height: auto !important;
+                overflow: visible !important;
+                padding-right: 0;
+            }
+
+            .workspace .tool-section#toolB,
+            .workspace .tool-section#toolA {
+                display: none !important;
+            }
+
+            .workspace .tool-section:last-child {
+                display: flex !important;
+                height: auto !important;
+                width: 100%;
+                padding: 14px;
+                margin-top: 14px;
+            }
+
+            .m-tap-a, .m-tap-b { display: block; }
+
+            .puzzle-cell.tapping-a { border-color: #18c8ff; }
+            .puzzle-cell.tapping-b { border-color: #ffd33d; }
+
+            .site-footer {
+                margin-top: 12px;
+                padding: 10px 8px 18px;
+                font-size: 10px;
+            }
+        }
+</style>
+<base target="_blank">
+<base target="_blank">
+</head>
+<body>
+    <div class="main-layout">
+        <!-- ==================== 画布区 ==================== -->
+        <div class="canvas-wrapper">
+          <div class="canvas-scaler" id="canvasScaler">
+            <div class="canvas-area" id="captureArea">
+                <div class="canvas-header">
+                    <h2>奇象巡展 × FGO</h2>
+                    <div class="subtitle">怪东西问卷</div>
+                    <div class="name-line">填表人：<input type="text" placeholder=" " id="nameInput"></div>
+                </div>
+
+                <div class="canvas-body">
+                    <div class="half-zone">
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-1" onclick="selectPuzzle(1)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="m-tap-a" onclick="event.stopPropagation(); openMobilePicker(1, 'a')"></div>
+                                <div class="m-tap-b" onclick="event.stopPropagation(); openMobilePicker(1, 'b')"></div>
+                                <div class="puzzle-a"><canvas id="canvasA-1" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-1" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-1"></div>
+                                <div class="puzzle-mask-d" id="maskD-1"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-1"></textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-2" onclick="selectPuzzle(2)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="m-tap-a" onclick="event.stopPropagation(); openMobilePicker(2, 'a')"></div>
+                                <div class="m-tap-b" onclick="event.stopPropagation(); openMobilePicker(2, 'b')"></div>
+                                <div class="puzzle-a"><canvas id="canvasA-2" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-2" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-2"></div>
+                                <div class="puzzle-mask-d" id="maskD-2"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-2"></textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-3" onclick="selectPuzzle(3)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="m-tap-a" onclick="event.stopPropagation(); openMobilePicker(3, 'a')"></div>
+                                <div class="m-tap-b" onclick="event.stopPropagation(); openMobilePicker(3, 'b')"></div>
+                                <div class="puzzle-a"><canvas id="canvasA-3" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-3" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-3"></div>
+                                <div class="puzzle-mask-d" id="maskD-3"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="half-zone">
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-4" onclick="selectPuzzle(4)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="m-tap-a" onclick="event.stopPropagation(); openMobilePicker(4, 'a')"></div>
+                                <div class="m-tap-b" onclick="event.stopPropagation(); openMobilePicker(4, 'b')"></div>
+                                <div class="puzzle-a"><canvas id="canvasA-4" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-4" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-4"></div>
+                                <div class="puzzle-mask-d" id="maskD-4"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-4"></textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-5" onclick="selectPuzzle(5)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="m-tap-a" onclick="event.stopPropagation(); openMobilePicker(5, 'a')"></div>
+                                <div class="m-tap-b" onclick="event.stopPropagation(); openMobilePicker(5, 'b')"></div>
+                                <div class="puzzle-a"><canvas id="canvasA-5" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-5" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-5"></div>
+                                <div class="puzzle-mask-d" id="maskD-5"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-5"></textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="puzzle-cell" id="puzzle-6" onclick="selectPuzzle(6)">
+                                <div class="placeholder">① 点击区域<br>② 在工作区选择图片</div>
+                                <div class="m-tap-a" onclick="event.stopPropagation(); openMobilePicker(6, 'a')"></div>
+                                <div class="m-tap-b" onclick="event.stopPropagation(); openMobilePicker(6, 'b')"></div>
+                                <div class="puzzle-a"><canvas id="canvasA-6" width="48" height="48" style="display:none"></canvas></div>
+                                <div class="puzzle-b"><canvas id="canvasB-6" style="display:none"></canvas></div>
+                                <div class="puzzle-mask-c" id="maskC-6"></div>
+                                <div class="puzzle-mask-d" id="maskD-6"></div>
+                            </div>
+                            <div class="text-cell">
+                                <textarea placeholder="在此输入文字..." id="text-6"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== 工作区 (PC端) ==================== -->
+        <div class="workspace">
+            <div class="tool-section" id="toolB">
+                <h3>✨ 明日方舟人物模型选择</h3>
+                <input type="text" class="search-box" placeholder="🔍 搜索文件名..." oninput="filterImages('b', this.value)">
+                <div class="section-content">
+                    <div class="preset-grid" id="gridB"></div>
+                </div>
+                <p class="hint">鼠标悬浮缩略图查看角色名。</p>
+            </div>
+
+            <div class="tool-section" id="toolA">
+                <h3>🖼️ 画像选择 / 上传</h3>
+                <input type="text" class="search-box" placeholder="🔍 搜索文件名..." oninput="filterImages('a', this.value)">
+                <div class="section-content">
+                    <div class="preset-grid" id="gridA"></div>
+                </div>
+                <button class="upload-btn" onclick="document.getElementById('uploadA').click()">📁 上传本地图片</button>
+                <input type="file" id="uploadA" accept="image/*" onchange="handleUpload(event, 'a')">
+                <p class="hint">鼠标悬浮缩略图可查看技能件名，或另行上传其他图片。</p>
+            </div>
+
+            <div class="tool-section">
+                <h3>📸 生成图片</h3>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="capture()">图片导出</button>
+                    <button class="btn btn-secondary" onclick="resetAll()">重置全部</button>
+                </div>
+                <p class="hint">如生成失败，请检查浏览器是否允许弹窗。</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="site-footer">本项目为非营利性同人创作，项目中使用的游戏素材、角色形象、图片等版权归原版权方所有，请勿将这些素材用于商业用途或二次分发。</footer>
+
+    <!-- ==================== 快照预览弹窗 ==================== -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <h3>📷 图片预览</h3>
+            <img id="previewImg" alt="快照预览">
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="downloadImage()">💾 保存到本地</button>
+                <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 移动端底部选择弹窗 ==================== -->
+    <div class="mobile-picker-overlay" id="mobilePickerModal">
+        <div class="mobile-picker-panel">
+            <div class="mobile-picker-header">
+                <h3 id="mobilePickerTitle">选择图片</h3>
+                <button class="mobile-picker-close" onclick="closeMobilePicker()">&times;</button>
+            </div>
+            <input type="text" class="mobile-picker-search" id="mobilePickerSearch" placeholder="🔍 搜索..." oninput="filterMobilePicker(this.value)">
+            <div class="mobile-picker-body">
+                <div class="mobile-picker-grid" id="mobilePickerGrid"></div>
+            </div>
+            <div class="mobile-upload-area" id="mobileUploadArea" style="display:none;">
+                <button class="upload-btn" onclick="document.getElementById('mobileUploadInput').click()">📁 上传本地图片</button>
+                <input type="file" id="mobileUploadInput" accept="image/*" onchange="handleMobileUpload(event)">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================
+        // 配置区
+        // =====================================================
+        let presetImages = { a: [], b: [] };
+        let currentPuzzleId = null;
+        let mobilePickerType = null;
+        const puzzleData = {
+            1: { a: null, b: null },
+            2: { a: null, b: null },
+            3: { a: null, b: null },
+            4: { a: null, b: null },
+            5: { a: null, b: null },
+            6: { a: null, b: null },
+        };
+
+        function loadImages() {
+            presetImages = {
+  "a": [
+    {"file": "images/A/NP获得量提升.png", "name": "NP获得量提升"},
+    {"file": "images/A/七顶兽冠.png", "name": "七顶兽冠"},
+    {"file": "images/A/三色魔放.png", "name": "三色魔放"},
+    {"file": "images/A/下毒.png", "name": "下毒"},
+    {"file": "images/A/与睿智的接触.png", "name": "与睿智的接触"},
+    {"file": "images/A/人鱼肉.png", "name": "人鱼肉"},
+    {"file": "images/A/伤害下降.png", "name": "伤害下降"},
+    {"file": "images/A/充能.png", "name": "充能"},
+    {"file": "images/A/充能阶段上升.png", "name": "充能阶段上升"},
+    {"file": "images/A/光之地平线.png", "name": "光之地平线"},
+    {"file": "images/A/冥界守护.png", "name": "冥界守护"},
+    {"file": "images/A/减冷却.png", "name": "减冷却"},
+    {"file": "images/A/出星.png", "name": "出星"},
+    {"file": "images/A/加攻.png", "name": "加攻"},
+    {"file": "images/A/加攻加防.png", "name": "加攻加防"},
+    {"file": "images/A/加防.png", "name": "加防"},
+    {"file": "images/A/即死成功率下降.png", "name": "即死成功率下降"},
+    {"file": "images/A/即死成功率提升.png", "name": "即死成功率提升"},
+    {"file": "images/A/即死无效.png", "name": "即死无效"},
+    {"file": "images/A/即死耐性下降.png", "name": "即死耐性下降"},
+    {"file": "images/A/即死耐性提升.png", "name": "即死耐性提升"},
+    {"file": "images/A/反集星.png", "name": "反集星"},
+    {"file": "images/A/受击NP获得量下降.png", "name": "受击NP获得量下降"},
+    {"file": "images/A/受击NP获得量提升.png", "name": "受击NP获得量提升"},
+    {"file": "images/A/噬樱者.png", "name": "噬樱者"},
+    {"file": "images/A/回合充能.png", "name": "回合充能"},
+    {"file": "images/A/回合出星.png", "name": "回合出星"},
+    {"file": "images/A/回复量下降.png", "name": "回复量下降"},
+    {"file": "images/A/回复量提升.png", "name": "回复量提升"},
+    {"file": "images/A/回血.png", "name": "回血"},
+    {"file": "images/A/回避.png", "name": "回避"},
+    {"file": "images/A/妖星火轮.png", "name": "妖星火轮"},
+    {"file": "images/A/完全流体.png", "name": "完全流体"},
+    {"file": "images/A/宝具威力下降.png", "name": "宝具威力下降"},
+    {"file": "images/A/宝具威力提升.png", "name": "宝具威力提升"},
+    {"file": "images/A/封印.png", "name": "封印"},
+    {"file": "images/A/弱化成功率下降.png", "name": "弱化成功率下降"},
+    {"file": "images/A/弱化成功率提升.png", "name": "弱化成功率提升"},
+    {"file": "images/A/弱化无效.png", "name": "弱化无效"},
+    {"file": "images/A/弱化耐性下降.png", "name": "弱化耐性下降"},
+    {"file": "images/A/弱化耐性提升.png", "name": "弱化耐性提升"},
+    {"file": "images/A/弱化解除.png", "name": "弱化解除"},
+    {"file": "images/A/强化无效.png", "name": "强化无效"},
+    {"file": "images/A/强化解除耐性下降.png", "name": "强化解除耐性下降"},
+    {"file": "images/A/强化解除耐性提升.png", "name": "强化解除耐性提升"},
+    {"file": "images/A/必中.png", "name": "必中"},
+    {"file": "images/A/掉星率增加.png", "name": "掉星率增加"},
+    {"file": "images/A/攻击附加弱化.png", "name": "攻击附加弱化"},
+    {"file": "images/A/攻击附加强化.png", "name": "攻击附加强化"},
+    {"file": "images/A/无敌.png", "name": "无敌"},
+    {"file": "images/A/无敌贯通.png", "name": "无敌贯通"},
+    {"file": "images/A/无视弱化耐性.png", "name": "无视弱化耐性"},
+    {"file": "images/A/无貌之月.png", "name": "无貌之月"},
+    {"file": "images/A/星之笼(大).png", "name": "星之笼(大)"},
+    {"file": "images/A/星之笼(小).png", "name": "星之笼(小)"},
+    {"file": "images/A/暴击发生率下降.png", "name": "暴击发生率下降"},
+    {"file": "images/A/暴击威力下降.png", "name": "暴击威力下降"},
+    {"file": "images/A/暴击威力提升.png", "name": "暴击威力提升"},
+    {"file": "images/A/毅力.png", "name": "毅力"},
+    {"file": "images/A/每回合回复.png", "name": "每回合回复"},
+    {"file": "images/A/毒.png", "name": "毒"},
+    {"file": "images/A/洗牌.png", "name": "洗牌"},
+    {"file": "images/A/灭气.png", "name": "灭气"},
+    {"file": "images/A/灼伤.png", "name": "灼伤"},
+    {"file": "images/A/特攻.png", "name": "特攻"},
+    {"file": "images/A/特殊耐性下降.png", "name": "特殊耐性下降"},
+    {"file": "images/A/特殊耐性提升.png", "name": "特殊耐性提升"},
+    {"file": "images/A/目标集中.png", "name": "目标集中"},
+    {"file": "images/A/直死之魔眼.png", "name": "直死之魔眼"},
+    {"file": "images/A/眩晕.png", "name": "眩晕"},
+    {"file": "images/A/睡眠.png", "name": "睡眠"},
+    {"file": "images/A/秀丽风情.png", "name": "秀丽风情"},
+    {"file": "images/A/秒表buff.png", "name": "秒表buff"},
+    {"file": "images/A/秒表亡语.png", "name": "秒表亡语"},
+    {"file": "images/A/秒表毅力.png", "name": "秒表毅力"},
+    {"file": "images/A/第五势.png", "name": "第五势"},
+    {"file": "images/A/第五盛.png", "name": "第五盛"},
+    {"file": "images/A/红卡集星.png", "name": "红卡集星"},
+    {"file": "images/A/红放.png", "name": "红放"},
+    {"file": "images/A/红绿放.png", "name": "红绿放"},
+    {"file": "images/A/红蓝放.png", "name": "红蓝放"},
+    {"file": "images/A/绿卡集星.png", "name": "绿卡集星"},
+    {"file": "images/A/绿放.png", "name": "绿放"},
+    {"file": "images/A/罗宾鸟.png", "name": "罗宾鸟"},
+    {"file": "images/A/蓝卡集星.png", "name": "蓝卡集星"},
+    {"file": "images/A/蓝放.png", "name": "蓝放"},
+    {"file": "images/A/蓝绿放.png", "name": "蓝绿放"},
+    {"file": "images/A/血量上升.png", "name": "血量上升"},
+    {"file": "images/A/被暴击发生耐性提升.png", "name": "被暴击发生耐性提升"},
+    {"file": "images/A/诅咒.png", "name": "诅咒"},
+    {"file": "images/A/赤之星瞳.png", "name": "赤之星瞳"},
+    {"file": "images/A/阴阳鱼.png", "name": "阴阳鱼"},
+    {"file": "images/A/降攻.png", "name": "降攻"},
+    {"file": "images/A/降防.png", "name": "降防"},
+    {"file": "images/A/雅号·异星蛸.png", "name": "雅号·异星蛸"},
+    {"file": "images/A/集星.png", "name": "集星"},
+    {"file": "images/A/青之星瞳.png", "name": "青之星瞳"},
+    {"file": "images/A/魅惑.png", "name": "魅惑"},
+    {"file": "images/A/魔弹.png", "name": "魔弹"}
+  ],
+  "b": [
+    {"file": "images/B/12F.png", "name": "12F"},
+    {"file": "images/B/Castle-3.png", "name": "Castle-3"},
+    {"file": "images/B/CONFESS-47.png", "name": "CONFESS-47"},
+    {"file": "images/B/Friston-3.png", "name": "Friston-3"},
+    {"file": "images/B/GALLUS².png", "name": "GALLUS²"},
+    {"file": "images/B/Lancet-2.png", "name": "Lancet-2"},
+    {"file": "images/B/Miss.Christine.png", "name": "Miss.Christine"},
+    {"file": "images/B/Mon3tr.png", "name": "Mon3tr"},
+    {"file": "images/B/PhonoR-0.png", "name": "PhonoR-0"},
+    {"file": "images/B/THRM-EX.png", "name": "THRM-EX"},
+    {"file": "images/B/U-Official.png", "name": "U-Official"},
+    {"file": "images/B/W.png", "name": "W"},
+    {"file": "images/B/万顷.png", "name": "万顷"},
+    {"file": "images/B/三角初华.png", "name": "三角初华"},
+    {"file": "images/B/丰川祥子.png", "name": "丰川祥子"},
+    {"file": "images/B/临光.png", "name": "临光"},
+    {"file": "images/B/乌啾.png", "name": "乌啾"},
+    {"file": "images/B/乌尔比安.png", "name": "乌尔比安"},
+    {"file": "images/B/乌有.png", "name": "乌有"},
+    {"file": "images/B/九色鹿.png", "name": "九色鹿"},
+    {"file": "images/B/予愿安洁莉娜.png", "name": "予愿安洁莉娜"},
+    {"file": "images/B/云迹.png", "name": "云迹"},
+    {"file": "images/B/亚叶.png", "name": "亚叶"},
+    {"file": "images/B/仇白.png", "name": "仇白"},
+    {"file": "images/B/令.png", "name": "令"},
+    {"file": "images/B/伊内丝.png", "name": "伊内丝"},
+    {"file": "images/B/伊桑.png", "name": "伊桑"},
+    {"file": "images/B/伊芙利特.png", "name": "伊芙利特"},
+    {"file": "images/B/休谟斯.png", "name": "休谟斯"},
+    {"file": "images/B/伯塔尼.png", "name": "伯塔尼"},
+    {"file": "images/B/伺夜.png", "name": "伺夜"},
+    {"file": "images/B/但书.png", "name": "但书"},
+    {"file": "images/B/余.png", "name": "余"},
+    {"file": "images/B/佩佩.png", "name": "佩佩"},
+    {"file": "images/B/佩德洛.png", "name": "佩德洛"},
+    {"file": "images/B/信仰搅拌机.png", "name": "信仰搅拌机"},
+    {"file": "images/B/假日威龙陈.png", "name": "假日威龙陈"},
+    {"file": "images/B/傀影.png", "name": "傀影"},
+    {"file": "images/B/克洛丝.png", "name": "克洛丝"},
+    {"file": "images/B/八幡海铃.png", "name": "八幡海铃"},
+    {"file": "images/B/冬时.png", "name": "冬时"},
+    {"file": "images/B/冰酿.png", "name": "冰酿"},
+    {"file": "images/B/凛冬.png", "name": "凛冬"},
+    {"file": "images/B/凛御银灰.png", "name": "凛御银灰"},
+    {"file": "images/B/凛视.png", "name": "凛视"},
+    {"file": "images/B/凯尔希.png", "name": "凯尔希"},
+    {"file": "images/B/凯尔希·思衡托.png", "name": "凯尔希·思衡托"},
+    {"file": "images/B/凯瑟琳.png", "name": "凯瑟琳"},
+    {"file": "images/B/初雪.png", "name": "初雪"},
+    {"file": "images/B/刺玫.png", "name": "刺玫"},
+    {"file": "images/B/刻俄柏.png", "name": "刻俄柏"},
+    {"file": "images/B/刻刀.png", "name": "刻刀"},
+    {"file": "images/B/医生.png", "name": "医生"},
+    {"file": "images/B/华法琳.png", "name": "华法琳"},
+    {"file": "images/B/协律.png", "name": "协律"},
+    {"file": "images/B/卡夫卡.png", "name": "卡夫卡"},
+    {"file": "images/B/卡涅利安.png", "name": "卡涅利安"},
+    {"file": "images/B/卡缇.png", "name": "卡缇"},
+    {"file": "images/B/卡达.png", "name": "卡达"},
+    {"file": "images/B/历阵锐枪芬.png", "name": "历阵锐枪芬"},
+    {"file": "images/B/双月.png", "name": "双月"},
+    {"file": "images/B/古米.png", "name": "古米"},
+    {"file": "images/B/可露希尔.png", "name": "可露希尔"},
+    {"file": "images/B/可颂.png", "name": "可颂"},
+    {"file": "images/B/史尔特尔.png", "name": "史尔特尔"},
+    {"file": "images/B/史都华德.png", "name": "史都华德"},
+    {"file": "images/B/号角.png", "name": "号角"},
+    {"file": "images/B/司霆惊蛰.png", "name": "司霆惊蛰"},
+    {"file": "images/B/吉星.png", "name": "吉星"},
+    {"file": "images/B/吽.png", "name": "吽"},
+    {"file": "images/B/和弦.png", "name": "和弦"},
+    {"file": "images/B/哈洛德.png", "name": "哈洛德"},
+    {"file": "images/B/哈蒂娅.png", "name": "哈蒂娅"},
+    {"file": "images/B/响石.png", "name": "响石"},
+    {"file": "images/B/嘉维尔.png", "name": "嘉维尔"},
+    {"file": "images/B/嘉辛塔.png", "name": "嘉辛塔"},
+    {"file": "images/B/四月.png", "name": "四月"},
+    {"file": "images/B/因陀罗.png", "name": "因陀罗"},
+    {"file": "images/B/图耶.png", "name": "图耶"},
+    {"file": "images/B/圣约送葬人.png", "name": "圣约送葬人"},
+    {"file": "images/B/圣聆初雪.png", "name": "圣聆初雪"},
+    {"file": "images/B/地灵.png", "name": "地灵"},
+    {"file": "images/B/坚雷.png", "name": "坚雷"},
+    {"file": "images/B/埃拉托.png", "name": "埃拉托"},
+    {"file": "images/B/塑心.png", "name": "塑心"},
+    {"file": "images/B/塞雷娅.png", "name": "塞雷娅"},
+    {"file": "images/B/复奏.png", "name": "复奏"},
+    {"file": "images/B/夏栎.png", "name": "夏栎"},
+    {"file": "images/B/夕.png", "name": "夕"},
+    {"file": "images/B/多萝西.png", "name": "多萝西"},
+    {"file": "images/B/夜刀.png", "name": "夜刀"},
+    {"file": "images/B/夜半.png", "name": "夜半"},
+    {"file": "images/B/夜烟.png", "name": "夜烟"},
+    {"file": "images/B/夜莺.png", "name": "夜莺"},
+    {"file": "images/B/夜魔.png", "name": "夜魔"},
+    {"file": "images/B/天火.png", "name": "天火"},
+    {"file": "images/B/天空盒.png", "name": "天空盒"},
+    {"file": "images/B/奥斯塔.png", "name": "奥斯塔"},
+    {"file": "images/B/奥达.png", "name": "奥达"},
+    {"file": "images/B/妮芙.png", "name": "妮芙"},
+    {"file": "images/B/娜仁图亚.png", "name": "娜仁图亚"},
+    {"file": "images/B/娜斯提.png", "name": "娜斯提"},
+    {"file": "images/B/子月.png", "name": "子月"},
+    {"file": "images/B/孑.png", "name": "孑"},
+    {"file": "images/B/守林人.png", "name": "守林人"},
+    {"file": "images/B/安哲拉.png", "name": "安哲拉"},
+    {"file": "images/B/安德切尔.png", "name": "安德切尔"},
+    {"file": "images/B/安比尔.png", "name": "安比尔"},
+    {"file": "images/B/安洁莉娜.png", "name": "安洁莉娜"},
+    {"file": "images/B/安赛尔.png", "name": "安赛尔"},
+    {"file": "images/B/宴.png", "name": "宴"},
+    {"file": "images/B/寒檀.png", "name": "寒檀"},
+    {"file": "images/B/寒芒克洛丝.png", "name": "寒芒克洛丝"},
+    {"file": "images/B/寻澜.png", "name": "寻澜"},
+    {"file": "images/B/导火索.png", "name": "导火索"},
+    {"file": "images/B/小满.png", "name": "小满"},
+    {"file": "images/B/山.png", "name": "山"},
+    {"file": "images/B/崖心.png", "name": "崖心"},
+    {"file": "images/B/嵯峨.png", "name": "嵯峨"},
+    {"file": "images/B/巡林者.png", "name": "巡林者"},
+    {"file": "images/B/左乐.png", "name": "左乐"},
+    {"file": "images/B/巫恋.png", "name": "巫恋"},
+    {"file": "images/B/布丁.png", "name": "布丁"},
+    {"file": "images/B/布洛卡.png", "name": "布洛卡"},
+    {"file": "images/B/帕拉斯.png", "name": "帕拉斯"},
+    {"file": "images/B/年.png", "name": "年"},
+    {"file": "images/B/幽灵鲨.png", "name": "幽灵鲨"},
+    {"file": "images/B/异客.png", "name": "异客"},
+    {"file": "images/B/弑君者.png", "name": "弑君者"},
+    {"file": "images/B/引星棘刺.png", "name": "引星棘刺"},
+    {"file": "images/B/归溟幽灵鲨.png", "name": "归溟幽灵鲨"},
+    {"file": "images/B/录武官.png", "name": "录武官"},
+    {"file": "images/B/微风.png", "name": "微风"},
+    {"file": "images/B/德克萨斯.png", "name": "德克萨斯"},
+    {"file": "images/B/忍冬.png", "name": "忍冬"},
+    {"file": "images/B/怒潮凛冬.png", "name": "怒潮凛冬"},
+    {"file": "images/B/惊蛰.png", "name": "惊蛰"},
+    {"file": "images/B/慑砂.png", "name": "慑砂"},
+    {"file": "images/B/慕斯.png", "name": "慕斯"},
+    {"file": "images/B/战车.png", "name": "战车"},
+    {"file": "images/B/截云.png", "name": "截云"},
+    {"file": "images/B/戴菲恩.png", "name": "戴菲恩"},
+    {"file": "images/B/承曦格雷伊.png", "name": "承曦格雷伊"},
+    {"file": "images/B/折光.png", "name": "折光"},
+    {"file": "images/B/折桠.png", "name": "折桠"},
+    {"file": "images/B/拉普兰德.png", "name": "拉普兰德"},
+    {"file": "images/B/拜松.png", "name": "拜松"},
+    {"file": "images/B/掠风.png", "name": "掠风"},
+    {"file": "images/B/推进之王.png", "name": "推进之王"},
+    {"file": "images/B/提丰.png", "name": "提丰"},
+    {"file": "images/B/摆渡人.png", "name": "摆渡人"},
+    {"file": "images/B/摩根.png", "name": "摩根"},
+    {"file": "images/B/撷英调香师.png", "name": "撷英调香师"},
+    {"file": "images/B/斑点.png", "name": "斑点"},
+    {"file": "images/B/斥罪.png", "name": "斥罪"},
+    {"file": "images/B/斩业星熊.png", "name": "斩业星熊"},
+    {"file": "images/B/断崖.png", "name": "断崖"},
+    {"file": "images/B/断罪者.png", "name": "断罪者"},
+    {"file": "images/B/斯卡蒂.png", "name": "斯卡蒂"},
+    {"file": "images/B/新约能天使.png", "name": "新约能天使"},
+    {"file": "images/B/早露.png", "name": "早露"},
+    {"file": "images/B/时隙.png", "name": "时隙"},
+    {"file": "images/B/明椒.png", "name": "明椒"},
+    {"file": "images/B/星极.png", "name": "星极"},
+    {"file": "images/B/星源.png", "name": "星源"},
+    {"file": "images/B/星熊.png", "name": "星熊"},
+    {"file": "images/B/晓歌.png", "name": "晓歌"},
+    {"file": "images/B/普罗旺斯.png", "name": "普罗旺斯"},
+    {"file": "images/B/暗索.png", "name": "暗索"},
+    {"file": "images/B/暮落.png", "name": "暮落"},
+    {"file": "images/B/暴行.png", "name": "暴行"},
+    {"file": "images/B/暴雨.png", "name": "暴雨"},
+    {"file": "images/B/月禾.png", "name": "月禾"},
+    {"file": "images/B/月见夜.png", "name": "月见夜"},
+    {"file": "images/B/望.png", "name": "望"},
+    {"file": "images/B/末药.png", "name": "末药"},
+    {"file": "images/B/机械师.png", "name": "机械师"},
+    {"file": "images/B/杏仁.png", "name": "杏仁"},
+    {"file": "images/B/杜宾.png", "name": "杜宾"},
+    {"file": "images/B/杜林.png", "name": "杜林"},
+    {"file": "images/B/杰克.png", "name": "杰克"},
+    {"file": "images/B/杰西卡.png", "name": "杰西卡"},
+    {"file": "images/B/松果.png", "name": "松果"},
+    {"file": "images/B/松桐.png", "name": "松桐"},
+    {"file": "images/B/极光.png", "name": "极光"},
+    {"file": "images/B/极境.png", "name": "极境"},
+    {"file": "images/B/林.png", "name": "林"},
+    {"file": "images/B/柏喙.png", "name": "柏喙"},
+    {"file": "images/B/格劳克斯.png", "name": "格劳克斯"},
+    {"file": "images/B/格拉尼.png", "name": "格拉尼"},
+    {"file": "images/B/格雷伊.png", "name": "格雷伊"},
+    {"file": "images/B/桃金娘.png", "name": "桃金娘"},
+    {"file": "images/B/桑葚.png", "name": "桑葚"},
+    {"file": "images/B/梅.png", "name": "梅"},
+    {"file": "images/B/梅尔.png", "name": "梅尔"},
+    {"file": "images/B/梓兰.png", "name": "梓兰"},
+    {"file": "images/B/棘刺.png", "name": "棘刺"},
+    {"file": "images/B/森蚺.png", "name": "森蚺"},
+    {"file": "images/B/森西.png", "name": "森西"},
+    {"file": "images/B/槐琥.png", "name": "槐琥"},
+    {"file": "images/B/歌蕾蒂娅.png", "name": "歌蕾蒂娅"},
+    {"file": "images/B/止颂.png", "name": "止颂"},
+    {"file": "images/B/正义骑士号.png", "name": "正义骑士号"},
+    {"file": "images/B/死芒.png", "name": "死芒"},
+    {"file": "images/B/水月.png", "name": "水月"},
+    {"file": "images/B/水灯心.png", "name": "水灯心"},
+    {"file": "images/B/泡普卡.png", "name": "泡普卡"},
+    {"file": "images/B/泡泡.png", "name": "泡泡"},
+    {"file": "images/B/波卜.png", "name": "波卜"},
+    {"file": "images/B/波登可.png", "name": "波登可"},
+    {"file": "images/B/泥岩.png", "name": "泥岩"},
+    {"file": "images/B/泰拉大陆调查团.png", "name": "泰拉大陆调查团"},
+    {"file": "images/B/洋灰.png", "name": "洋灰"},
+    {"file": "images/B/洛洛.png", "name": "洛洛"},
+    {"file": "images/B/流明.png", "name": "流明"},
+    {"file": "images/B/流星.png", "name": "流星"},
+    {"file": "images/B/浊心斯卡蒂.png", "name": "浊心斯卡蒂"},
+    {"file": "images/B/海沫.png", "name": "海沫"},
+    {"file": "images/B/海蒂.png", "name": "海蒂"},
+    {"file": "images/B/海霓.png", "name": "海霓"},
+    {"file": "images/B/涤火杰西卡.png", "name": "涤火杰西卡"},
+    {"file": "images/B/淬羽赫默.png", "name": "淬羽赫默"},
+    {"file": "images/B/深巡.png", "name": "深巡"},
+    {"file": "images/B/深律.png", "name": "深律"},
+    {"file": "images/B/深海色.png", "name": "深海色"},
+    {"file": "images/B/深靛.png", "name": "深靛"},
+    {"file": "images/B/清流.png", "name": "清流"},
+    {"file": "images/B/清道夫.png", "name": "清道夫"},
+    {"file": "images/B/渡桥.png", "name": "渡桥"},
+    {"file": "images/B/温米.png", "name": "温米"},
+    {"file": "images/B/温蒂.png", "name": "温蒂"},
+    {"file": "images/B/溯光星源.png", "name": "溯光星源"},
+    {"file": "images/B/澄闪.png", "name": "澄闪"},
+    {"file": "images/B/濯尘芙蓉.png", "name": "濯尘芙蓉"},
+    {"file": "images/B/火哨.png", "name": "火哨"},
+    {"file": "images/B/火神.png", "name": "火神"},
+    {"file": "images/B/火龙S黑角.png", "name": "火龙S黑角"},
+    {"file": "images/B/灰喉.png", "name": "灰喉"},
+    {"file": "images/B/灰毫.png", "name": "灰毫"},
+    {"file": "images/B/灰烬.png", "name": "灰烬"},
+    {"file": "images/B/灵知.png", "name": "灵知"},
+    {"file": "images/B/炎客.png", "name": "炎客"},
+    {"file": "images/B/炎熔.png", "name": "炎熔"},
+    {"file": "images/B/炎狱炎熔.png", "name": "炎狱炎熔"},
+    {"file": "images/B/烈夏.png", "name": "烈夏"},
+    {"file": "images/B/烛煌.png", "name": "烛煌"},
+    {"file": "images/B/焰尾.png", "name": "焰尾"},
+    {"file": "images/B/焰影苇草.png", "name": "焰影苇草"},
+    {"file": "images/B/焰狐龙梓兰.png", "name": "焰狐龙梓兰"},
+    {"file": "images/B/煌.png", "name": "煌"},
+    {"file": "images/B/熔泉.png", "name": "熔泉"},
+    {"file": "images/B/燧石.png", "name": "燧石"},
+    {"file": "images/B/爱丽丝.png", "name": "爱丽丝"},
+    {"file": "images/B/特克诺.png", "name": "特克诺"},
+    {"file": "images/B/特米米.png", "name": "特米米"},
+    {"file": "images/B/狮蝎.png", "name": "狮蝎"},
+    {"file": "images/B/猎蜂.png", "name": "猎蜂"},
+    {"file": "images/B/玛恩纳.png", "name": "玛恩纳"},
+    {"file": "images/B/玛露西尔.png", "name": "玛露西尔"},
+    {"file": "images/B/玫兰莎.png", "name": "玫兰莎"},
+    {"file": "images/B/玫拉.png", "name": "玫拉"},
+    {"file": "images/B/珊比.png", "name": "珊比"},
+    {"file": "images/B/琳琅诗怀雅.png", "name": "琳琅诗怀雅"},
+    {"file": "images/B/琴柳.png", "name": "琴柳"},
+    {"file": "images/B/瑕光.png", "name": "瑕光"},
+    {"file": "images/B/瑰盐.png", "name": "瑰盐"},
+    {"file": "images/B/电弧.png", "name": "电弧"},
+    {"file": "images/B/白金.png", "name": "白金"},
+    {"file": "images/B/白铁.png", "name": "白铁"},
+    {"file": "images/B/白雪.png", "name": "白雪"},
+    {"file": "images/B/白面鸮.png", "name": "白面鸮"},
+    {"file": "images/B/百炼嘉维尔.png", "name": "百炼嘉维尔"},
+    {"file": "images/B/真理.png", "name": "真理"},
+    {"file": "images/B/真言.png", "name": "真言"},
+    {"file": "images/B/矩.png", "name": "矩"},
+    {"file": "images/B/石棉.png", "name": "石棉"},
+    {"file": "images/B/石英.png", "name": "石英"},
+    {"file": "images/B/砾.png", "name": "砾"},
+    {"file": "images/B/祐天寺若麦.png", "name": "祐天寺若麦"},
+    {"file": "images/B/稀音.png", "name": "稀音"},
+    {"file": "images/B/空.png", "name": "空"},
+    {"file": "images/B/空弦.png", "name": "空弦"},
+    {"file": "images/B/空构.png", "name": "空构"},
+    {"file": "images/B/空爆.png", "name": "空爆"},
+    {"file": "images/B/米格鲁.png", "name": "米格鲁"},
+    {"file": "images/B/絮雨.png", "name": "絮雨"},
+    {"file": "images/B/红.png", "name": "红"},
+    {"file": "images/B/红云.png", "name": "红云"},
+    {"file": "images/B/红豆.png", "name": "红豆"},
+    {"file": "images/B/红隼.png", "name": "红隼"},
+    {"file": "images/B/纯烬艾雅法拉.png", "name": "纯烬艾雅法拉"},
+    {"file": "images/B/绮良.png", "name": "绮良"},
+    {"file": "images/B/维什戴尔.png", "name": "维什戴尔"},
+    {"file": "images/B/维伊.png", "name": "维伊"},
+    {"file": "images/B/维娜·维多利亚.png", "name": "维娜·维多利亚"},
+    {"file": "images/B/维荻.png", "name": "维荻"},
+    {"file": "images/B/缄默德克萨斯.png", "name": "缄默德克萨斯"},
+    {"file": "images/B/缇缇.png", "name": "缇缇"},
+    {"file": "images/B/缠丸.png", "name": "缠丸"},
+    {"file": "images/B/缪尔赛思.png", "name": "缪尔赛思"},
+    {"file": "images/B/罗宾.png", "name": "罗宾"},
+    {"file": "images/B/罗小黑.png", "name": "罗小黑"},
+    {"file": "images/B/罗德岛隐秘队.png", "name": "罗德岛隐秘队"},
+    {"file": "images/B/罗比菈塔.png", "name": "罗比菈塔"},
+    {"file": "images/B/羽毛笔.png", "name": "羽毛笔"},
+    {"file": "images/B/翎羽.png", "name": "翎羽"},
+    {"file": "images/B/耀骑士临光.png", "name": "耀骑士临光"},
+    {"file": "images/B/老鲤.png", "name": "老鲤"},
+    {"file": "images/B/耶拉.png", "name": "耶拉"},
+    {"file": "images/B/聆音.png", "name": "聆音"},
+    {"file": "images/B/能天使.png", "name": "能天使"},
+    {"file": "images/B/至简.png", "name": "至简"},
+    {"file": "images/B/艾丝黛尔.png", "name": "艾丝黛尔"},
+    {"file": "images/B/艾丽妮.png", "name": "艾丽妮"},
+    {"file": "images/B/艾拉.png", "name": "艾拉"},
+    {"file": "images/B/艾雅法拉.png", "name": "艾雅法拉"},
+    {"file": "images/B/芙兰卡.png", "name": "芙兰卡"},
+    {"file": "images/B/芙蓉.png", "name": "芙蓉"},
+    {"file": "images/B/芬.png", "name": "芬"},
+    {"file": "images/B/芳汀.png", "name": "芳汀"},
+    {"file": "images/B/苇草.png", "name": "苇草"},
+    {"file": "images/B/苍苔.png", "name": "苍苔"},
+    {"file": "images/B/苏苏洛.png", "name": "苏苏洛"},
+    {"file": "images/B/若叶睦.png", "name": "若叶睦"},
+    {"file": "images/B/苦艾.png", "name": "苦艾"},
+    {"file": "images/B/荒芜拉普兰德.png", "name": "荒芜拉普兰德"},
+    {"file": "images/B/莎草.png", "name": "莎草"},
+    {"file": "images/B/莫斯提马.png", "name": "莫斯提马"},
+    {"file": "images/B/莱伊.png", "name": "莱伊"},
+    {"file": "images/B/莱恩哈特.png", "name": "莱恩哈特"},
+    {"file": "images/B/莱欧斯.png", "name": "莱欧斯"},
+    {"file": "images/B/菲亚梅塔.png", "name": "菲亚梅塔"},
+    {"file": "images/B/菲莱.png", "name": "菲莱"},
+    {"file": "images/B/蒂比.png", "name": "蒂比"},
+    {"file": "images/B/蓝毒.png", "name": "蓝毒"},
+    {"file": "images/B/蕾缪安.png", "name": "蕾缪安"},
+    {"file": "images/B/薄绿.png", "name": "薄绿"},
+    {"file": "images/B/薇薇安娜.png", "name": "薇薇安娜"},
+    {"file": "images/B/蚀清.png", "name": "蚀清"},
+    {"file": "images/B/蛇屠箱.png", "name": "蛇屠箱"},
+    {"file": "images/B/蜜莓.png", "name": "蜜莓"},
+    {"file": "images/B/蜜蜡.png", "name": "蜜蜡"},
+    {"file": "images/B/行箸.png", "name": "行箸"},
+    {"file": "images/B/衡沙.png", "name": "衡沙"},
+    {"file": "images/B/裁度.png", "name": "裁度"},
+    {"file": "images/B/裂响.png", "name": "裂响"},
+    {"file": "images/B/褐果.png", "name": "褐果"},
+    {"file": "images/B/见行者.png", "name": "见行者"},
+    {"file": "images/B/角峰.png", "name": "角峰"},
+    {"file": "images/B/讯使.png", "name": "讯使"},
+    {"file": "images/B/诗怀雅.png", "name": "诗怀雅"},
+    {"file": "images/B/诺威尔.png", "name": "诺威尔"},
+    {"file": "images/B/调香师.png", "name": "调香师"},
+    {"file": "images/B/谜图.png", "name": "谜图"},
+    {"file": "images/B/谬因.png", "name": "谬因"},
+    {"file": "images/B/豆苗.png", "name": "豆苗"},
+    {"file": "images/B/贝娜.png", "name": "贝娜"},
+    {"file": "images/B/贝洛内.png", "name": "贝洛内"},
+    {"file": "images/B/贾维.png", "name": "贾维"},
+    {"file": "images/B/赤冬.png", "name": "赤冬"},
+    {"file": "images/B/赤刃明霄陈.png", "name": "赤刃明霄陈"},
+    {"file": "images/B/赫德雷.png", "name": "赫德雷"},
+    {"file": "images/B/赫拉格.png", "name": "赫拉格"},
+    {"file": "images/B/赫默.png", "name": "赫默"},
+    {"file": "images/B/跃跃.png", "name": "跃跃"},
+    {"file": "images/B/车尔尼.png", "name": "车尔尼"},
+    {"file": "images/B/达格达.png", "name": "达格达"},
+    {"file": "images/B/远山.png", "name": "远山"},
+    {"file": "images/B/远牙.png", "name": "远牙"},
+    {"file": "images/B/迷迭香.png", "name": "迷迭香"},
+    {"file": "images/B/送葬人.png", "name": "送葬人"},
+    {"file": "images/B/逻各斯.png", "name": "逻各斯"},
+    {"file": "images/B/遥.png", "name": "遥"},
+    {"file": "images/B/酒神.png", "name": "酒神"},
+    {"file": "images/B/酸糖.png", "name": "酸糖"},
+    {"file": "images/B/重岳.png", "name": "重岳"},
+    {"file": "images/B/野鬃.png", "name": "野鬃"},
+    {"file": "images/B/钼铅.png", "name": "钼铅"},
+    {"file": "images/B/铃兰.png", "name": "铃兰"},
+    {"file": "images/B/铅踝.png", "name": "铅踝"},
+    {"file": "images/B/铎铃.png", "name": "铎铃"},
+    {"file": "images/B/银灰.png", "name": "银灰"},
+    {"file": "images/B/铸铁.png", "name": "铸铁"},
+    {"file": "images/B/锏.png", "name": "锏"},
+    {"file": "images/B/锡人.png", "name": "锡人"},
+    {"file": "images/B/锡兰.png", "name": "锡兰"},
+    {"file": "images/B/闪击.png", "name": "闪击"},
+    {"file": "images/B/闪灵.png", "name": "闪灵"},
+    {"file": "images/B/阿.png", "name": "阿"},
+    {"file": "images/B/阿兰娜.png", "name": "阿兰娜"},
+    {"file": "images/B/阿斯卡纶.png", "name": "阿斯卡纶"},
+    {"file": "images/B/阿消.png", "name": "阿消"},
+    {"file": "images/B/阿米娅.png", "name": "阿米娅"},
+    {"file": "images/B/阿罗玛.png", "name": "阿罗玛"},
+    {"file": "images/B/陈.png", "name": "陈"},
+    {"file": "images/B/陨星.png", "name": "陨星"},
+    {"file": "images/B/隐德来希.png", "name": "隐德来希"},
+    {"file": "images/B/隐现.png", "name": "隐现"},
+    {"file": "images/B/雪猎.png", "name": "雪猎"},
+    {"file": "images/B/雪绒.png", "name": "雪绒"},
+    {"file": "images/B/雪雉.png", "name": "雪雉"},
+    {"file": "images/B/雷狼龙S空爆.png", "name": "雷狼龙S空爆"},
+    {"file": "images/B/雷蛇.png", "name": "雷蛇"},
+    {"file": "images/B/霍尔海雅.png", "name": "霍尔海雅"},
+    {"file": "images/B/霜华.png", "name": "霜华"},
+    {"file": "images/B/霜叶.png", "name": "霜叶"},
+    {"file": "images/B/露托.png", "name": "露托"},
+    {"file": "images/B/青枳.png", "name": "青枳"},
+    {"file": "images/B/鞭刃.png", "name": "鞭刃"},
+    {"file": "images/B/风丸.png", "name": "风丸"},
+    {"file": "images/B/风笛.png", "name": "风笛"},
+    {"file": "images/B/风絮.png", "name": "风絮"},
+    {"file": "images/B/食铁兽.png", "name": "食铁兽"},
+    {"file": "images/B/香草.png", "name": "香草"},
+    {"file": "images/B/骋风.png", "name": "骋风"},
+    {"file": "images/B/魔王.png", "name": "魔王"},
+    {"file": "images/B/鸿雪.png", "name": "鸿雪"},
+    {"file": "images/B/麒麟R夜刀.png", "name": "麒麟R夜刀"},
+    {"file": "images/B/麦哲伦.png", "name": "麦哲伦"},
+    {"file": "images/B/黍.png", "name": "黍"},
+    {"file": "images/B/黑.png", "name": "黑"},
+    {"file": "images/B/黑角.png", "name": "黑角"},
+    {"file": "images/B/黑键.png", "name": "黑键"},
+    {"file": "images/B/齐尔查克.png", "name": "齐尔查克"},
+    {"file": "images/B/龙舌兰.png", "name": "龙舌兰"}
+  ]
+};
+            renderGrid('a');
+            renderGrid('b');
+        }
+
+        function init() {
+            loadImages();
+            adjustCanvasScale();
+        }
+
+        function adjustCanvasScale() {
+            const wrapper = document.querySelector('.canvas-wrapper');
+            const scaler = document.getElementById('canvasScaler');
+            if (!wrapper || !scaler) return;
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                const scale = wrapper.clientWidth / 675;
+                scaler.style.transform = `scale(${scale})`;
+                wrapper.style.height = (900 * scale) + 'px';
+            } else {
+                scaler.style.transform = 'none';
+                wrapper.style.height = '900px';
+            }
+        }
+
+        window.addEventListener('resize', adjustCanvasScale);
+        window.addEventListener('load', adjustCanvasScale);
+
+        function renderGrid(type, filter) {
+            const grid = document.getElementById('grid' + type.toUpperCase());
+            if (!grid) return;
+            grid.innerHTML = '';
+            let list = presetImages[type] || [];
+            if (filter) {
+                list = list.filter(item => (item.name || '').toLowerCase().includes(filter.toLowerCase()));
+            }
+            if (list.length === 0) {
+                grid.innerHTML = '<div style="grid-column:1/-1;color:#444;font-size:12px;padding:16px;text-align:center;">无图片</div>';
+                return;
+            }
+            list.forEach((item) => {
+                const div = document.createElement('div');
+                div.className = 'preset-item';
+                div.setAttribute('data-name', item.name || '未命名');
+                div.title = item.name || '';
+                div.onclick = () => applyImage(type, item.file);
+                const img = document.createElement('img');
+                img.src = item.file;
+                img.alt = item.name || '';
+                img.onerror = () => {
+                    div.innerHTML = '<span style="color:#444;font-size:10px;display:flex;align-items:center;justify-content:center;height:100%;">' + (item.name || '?') + '</span>';
+                };
+                div.appendChild(img);
+                grid.appendChild(div);
+            });
+        }
+
+        function filterImages(type, keyword) {
+            renderGrid(type, keyword);
+        }
+
+        // =====================================================
+        // 选择拼图区
+        // =====================================================
+        function selectPuzzle(id) {
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById('puzzle-' + i).classList.remove('active');
+            }
+            document.getElementById('puzzle-' + id).classList.add('active');
+            currentPuzzleId = id;
+        }
+
+        // =====================================================
+        // 应用图片
+        // =====================================================
+        /* 新增：40 色限定调色板 + 最近色匹配 */
+        const PALETTE40 = [
+            '#222222','#b4b4b4','#eae7df','#ffffff',
+            '#d32f36','#9c0a00','#d60c4a','#e6968d',
+            '#fe9875','#f7d0c0','#fcefea','#fbf6e8',
+            '#dcd2c8','#e2ceab','#d56322','#d48c42',
+            '#f29900','#f9c933','#fce499','#b3b47a',
+            '#c2da72','#6c6e00','#b19155','#a98f74',
+            '#aa9228','#3f2b12','#74491f','#534658',
+            '#2a2446','#394599','#5a459d','#baa3d7',
+            '#b6bcdf','#a9acbe','#63abb9','#b4d2dc',
+            '#91d8e6','#47aea0','#b6d3c8','#273864'
+        ].map(h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)]);
+
+        function nearestPaletteColor(r, g, b) {
+            let best = PALETTE40[0], bestDist = Infinity;
+            for (const c of PALETTE40) {
+                const dr = r - c[0], dg = g - c[1], db = b - c[2];
+                const d = dr*dr + dg*dg + db*db;
+                if (d < bestDist) { bestDist = d; best = c; }
+            }
+            return best;
+        }
+
+        function applyImage(type, src) {
+            if (!currentPuzzleId) {
+                alert('请先点击左侧任意一个拼图区');
+                return;
+            }
+            puzzleData[currentPuzzleId][type] = src;
+            const placeholder = document.querySelector('#puzzle-' + currentPuzzleId + ' .placeholder');
+
+            if (type === 'a') {
+                const canvas = document.getElementById('canvasA-' + currentPuzzleId);
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                    const hidden = document.createElement('canvas');
+                    hidden.width = 24; hidden.height = 24;
+                    const hCtx = hidden.getContext('2d');
+                    hCtx.drawImage(img, 0, 0, 24, 24);
+                    // 把每个像素吸附到最近的调色板颜色
+                    const imageData = hCtx.getImageData(0, 0, 24, 24);
+                    const d = imageData.data;
+                    for (let i = 0; i < d.length; i += 4) {
+                        if (d[i + 3] < 128) { d[i + 3] = 0; continue; } // 半透明直接变全透明
+                        const c = nearestPaletteColor(d[i], d[i + 1], d[i + 2]);
+                        d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+                    }
+                    hCtx.putImageData(imageData, 0, 0);
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.clearRect(0, 0, 48, 48);
+                    ctx.drawImage(hidden, 0, 0, 48, 48);
+                    canvas.style.display = 'block';
+                    const tapA = document.querySelector('#puzzle-' + currentPuzzleId + ' .m-tap-a');
+if (tapA) tapA.classList.add('filled');
+                    if (placeholder) placeholder.style.display = 'none';
+                };
+                img.src = src;
+            } else {
+                const canvas = document.getElementById('canvasB-' + currentPuzzleId);
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                    const scale = 0.28;
+                    const w = Math.round(img.naturalWidth * scale);
+                    const h = Math.round(img.naturalHeight * scale);
+                    canvas.width = w;
+                    canvas.height = h;
+                    ctx.clearRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+                    canvas.style.display = 'block';
+                    const tapB = document.querySelector('#puzzle-' + currentPuzzleId + ' .m-tap-b');
+if (tapB) tapB.classList.add('filled');
+                    if (placeholder) placeholder.style.display = 'none';
+                };
+                img.src = src;
+            }
+        }
+
+        // =====================================================
+        // 本地上传 (PC端A区)
+        // =====================================================
+        function handleUpload(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('请选择图片文件');
+                return;
+            }
+            if (!currentPuzzleId) {
+                alert('请先点击左侧一个拼图区');
+                event.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => { applyImage(type, e.target.result); };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        // =====================================================
+        // 移动端弹窗逻辑
+        // =====================================================
+        function openMobilePicker(puzzleId, type) {
+            currentPuzzleId = puzzleId;
+            mobilePickerType = type;
+
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById('puzzle-' + i).classList.remove('active', 'tapping-a', 'tapping-b');
+            }
+            document.getElementById('puzzle-' + puzzleId).classList.add('active', type === 'a' ? 'tapping-a' : 'tapping-b');
+
+            const modal = document.getElementById('mobilePickerModal');
+            const title = document.getElementById('mobilePickerTitle');
+            const uploadArea = document.getElementById('mobileUploadArea');
+            const search = document.getElementById('mobilePickerSearch');
+
+            title.textContent = type === 'a' ? '🖼️ 选择画像 (A)' : '✨ 选择人物模型 (B)';
+            uploadArea.style.display = type === 'a' ? 'block' : 'none';
+            search.value = '';
+
+            renderMobilePickerGrid('');
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobilePicker() {
+            const modal = document.getElementById('mobilePickerModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById('puzzle-' + i).classList.remove('tapping-a', 'tapping-b');
+            }
+        }
+
+        function renderMobilePickerGrid(filter) {
+            const grid = document.getElementById('mobilePickerGrid');
+            const type = mobilePickerType;
+            if (!grid || !type) return;
+
+            grid.innerHTML = '';
+            let list = presetImages[type] || [];
+            if (filter) {
+                list = list.filter(item => (item.name || '').toLowerCase().includes(filter.toLowerCase()));
+            }
+            if (list.length === 0) {
+                grid.innerHTML = '<div style="grid-column:1/-1;color:#444;font-size:13px;padding:20px;text-align:center;">无图片</div>';
+                return;
+            }
+
+            list.forEach((item) => {
+                const div = document.createElement('div');
+                div.className = 'preset-item';
+                if (type === 'b') div.setAttribute('data-ratio', '2/3');
+                div.setAttribute('data-name', item.name || '未命名');
+                div.title = item.name || '';
+                div.onclick = () => {
+                    applyImage(type, item.file);
+                    closeMobilePicker();
+                };
+                const img = document.createElement('img');
+                img.src = item.file;
+                img.alt = item.name || '';
+                img.onerror = () => {
+                    div.innerHTML = '<span style="color:#444;font-size:10px;display:flex;align-items:center;justify-content:center;height:100%;">' + (item.name || '?') + '</span>';
+                };
+                div.appendChild(img);
+                grid.appendChild(div);
+            });
+        }
+
+        function filterMobilePicker(keyword) {
+            renderMobilePickerGrid(keyword);
+        }
+
+        function handleMobileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('请选择图片文件');
+                return;
+            }
+            if (!currentPuzzleId) {
+                alert('请先选择一个拼图区');
+                event.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                applyImage('a', e.target.result);
+                closeMobilePicker();
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        document.getElementById('mobilePickerModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('mobilePickerModal')) closeMobilePicker();
+        });
+
+        // =====================================================
+        // 截图生成
+        // =====================================================
+        async function capture() {
+            const area = document.getElementById('captureArea');
+            const scaler = document.getElementById('canvasScaler');
+            const wrapper = document.querySelector('.canvas-wrapper');
+            const btn = document.querySelector('.btn-primary');
+            const orig = btn.innerText;
+            btn.innerText = '生成中...';
+            btn.disabled = true;
+
+            const origTransform = scaler.style.transform;
+            const origWrapperHeight = wrapper.style.height;
+            const isMobile = window.innerWidth <= 768;
+
+            if (isMobile) {
+    scaler.style.transform = 'none';
+    wrapper.style.height = '900px';
+}
+
+
+
+            try {
+const canvas = await html2canvas(area, {
+    backgroundColor: '#0a0a0a',
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    logging: false,
+    onclone: (clonedDoc) => {
+        clonedDoc.querySelectorAll('.m-tap-a, .m-tap-b').forEach(el => el.style.display = 'none');
+        clonedDoc.querySelectorAll('.text-cell textarea').forEach(ta => {
+            const div = clonedDoc.createElement('div');
+            // 复制 inline 样式（包括你动态缩小的 font-size）
+            div.style.cssText = ta.style.cssText;
+            
+            // 覆盖成 div 安全样式
+            div.style.width = '100%';
+            div.style.height = '100%';
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.overflow = 'visible';
+            div.style.wordBreak = 'break-all';
+            div.style.whiteSpace = 'pre-wrap';
+            div.style.background = 'transparent';
+            div.style.border = 'none';
+            div.style.resize = 'none';
+            div.style.outline = 'none';
+            div.style.appearance = 'none';
+            div.style.boxSizing = 'border-box';
+            div.style.lineHeight = '1.4';
+            div.style.color = '#ffffff';
+            
+            div.textContent = ta.value;
+            ta.parentNode.replaceChild(div, ta);
+        });
+    }
+});
+                captureDataUrl = canvas.toDataURL('image/png');
+                document.getElementById('previewImg').src = captureDataUrl;
+                document.getElementById('modal').classList.add('active');
+            } catch (err) {
+                console.error(err);
+                alert('生成失败，请检查图片是否正常加载');
+} finally {
+    btn.innerText = orig;
+    btn.disabled = false;
+    // 恢复缩放
+    if (isMobile) {
+        scaler.style.transform = origTransform;
+        wrapper.style.height = origWrapperHeight;
+    }
+
+}
+        }
+
+        function downloadImage() {
+            if (!captureDataUrl) return;
+            const a = document.createElement('a');
+            a.download = 'FGO怪东西问卷_' + Date.now() + '.png';
+            a.href = captureDataUrl;
+            a.click();
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function resetAll() {
+            if (!confirm('确定要清空所有拼图和文字吗？')) return;
+            for (let i = 1; i <= 6; i++) {
+                puzzleData[i] = { a: null, b: null };
+                document.getElementById('canvasA-' + i).style.display = 'none';
+                document.getElementById('canvasB-' + i).style.display = 'none';
+                document.getElementById('text-' + i).value = '';
+                const ph = document.querySelector('#puzzle-' + i + ' .placeholder');
+                if (ph) ph.style.display = 'flex';
+                const tapA = document.querySelector('#puzzle-' + i + ' .m-tap-a');
+const tapB = document.querySelector('#puzzle-' + i + ' .m-tap-b');
+if (tapA) tapA.classList.remove('filled');
+if (tapB) tapB.classList.remove('filled');
+                document.getElementById('puzzle-' + i).classList.remove('active', 'tapping-a', 'tapping-b');
+            }
+            document.getElementById('nameInput').value = '';
+            currentPuzzleId = null;
+        }
+
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('modal')) closeModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeMobilePicker();
+            }
+        });
+
+        init();
+
+        document.querySelectorAll('.text-cell textarea').forEach(ta => {
+            ta.addEventListener('input', function() {
+                this.style.fontSize = '24px';
+                this.style.height = 100;
+                const maxH = this.parentElement.clientHeight;
+                while (this.scrollHeight > maxH && parseInt(this.style.fontSize) > 10) {
+                    this.style.fontSize = (parseInt(this.style.fontSize) - 1) + 'px';
+                }
+            });
+        });
+    </script>
+</body>
+</html> if (e.key === 'E
