@@ -133,7 +133,7 @@
         }
         .canvas-header h2 {
             font-size: 32px;
-            margin-top: 1.5vw;
+            margin-top: 2.5vw;
             margin-bottom: 1%;
             letter-spacing: 4px;
             font-weight: 800;
@@ -1764,6 +1764,9 @@ if (tapB) tapB.classList.add('filled');
             const wrapper = document.querySelector('.canvas-wrapper');
             const btn = document.querySelector('.btn-primary');
             const orig = btn.innerText;
+                        // 新增：导出前关闭所有弹窗，避免遮罩被截入
+            closeModal();
+            closeMobilePicker();
             btn.innerText = '生成中...';
             btn.disabled = true;
 
